@@ -48,6 +48,7 @@ export const okrCycles = pgTable("okr_cycles", {
   endDate: date("end_date").notNull(),
   status: cycleStatus("status").default("draft").notNull(),
   finalReflection: text("final_reflection").default("").notNull(),
+  version: integer("version").default(1).notNull(),
   createdBy: text("created_by").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
@@ -84,6 +85,7 @@ export const keyResults = pgTable("key_results", {
   target: numeric("target", { precision: 14, scale: 4 }).notNull(),
   current: numeric("current", { precision: 14, scale: 4 }).notNull(),
   progress: numeric("progress", { precision: 6, scale: 2 }).default("0").notNull(),
+  version: integer("version").default(1).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
