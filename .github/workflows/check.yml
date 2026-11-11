@@ -1,0 +1,33 @@
+name: Starter checks
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  production:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Check deployment examples
+        run: |
+          python3 -m pip install PyYAML==6.0.3
+          python3 scripts/test_deployment_contract.py
+      - name: Build locked production image
+        run: docker build -f .neander/Dockerfile -t neander-starter-nextjs:local .
+      - name: Check literal environment handling
+        run: python3 scripts/test_entrypoint.py
+      - name: Check production HTTP routes
+        run: |
+          docker run --detach --name starter-check --publish 127.0.0.1:8080:8080 neander-starter-nextjs:local
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8080/api/health; then break; fi
+            sleep 1
+          done
+          python3 scripts/smoke.py http://127.0.0.1:8080
+      - name: Container logs and cleanup
+        if: always()
+        run: |
+          docker logs starter-check || true
+          docker rm --force starter-check || true

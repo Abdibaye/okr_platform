@@ -1,0 +1,23 @@
+import { eq } from "drizzle-orm";
+import { getDb } from "../../../server/db";
+import { todos } from "../../../server/schema";
+export async function GET() { return Response.json(await getDb().select().from(todos).limit(100)); }
+export async function POST(request: Request) {
+  const body = await request.json().catch(() => null);
+  if (typeof body?.title !== "string" || !body.title.trim() || body.title.length > 200) return Response.json({ error: "Title is required (maximum 200 characters)" }, { status: 400 });
+  const [todo] = await getDb().insert(todos).values({ title: body.title.trim() }).returning();
+  return Response.json(todo, { status: 201 });
+}
+function validId(value: unknown): value is string { return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value); }
+export async function PATCH(request: Request) {
+  const body = await request.json().catch(() => null);
+  if (!validId(body?.id) || typeof body?.done !== "boolean") return Response.json({ error: "id and done are required" }, { status: 400 });
+  const [todo] = await getDb().update(todos).set({ done: body.done }).where(eq(todos.id, body.id)).returning();
+  return todo ? Response.json(todo) : Response.json({ error: "Not found" }, { status: 404 });
+}
+export async function DELETE(request: Request) {
+  const id = new URL(request.url).searchParams.get("id");
+  if (!validId(id)) return Response.json({ error: "id is required" }, { status: 400 });
+  const [todo] = await getDb().delete(todos).where(eq(todos.id, id)).returning();
+  return todo ? new Response(null, { status: 204 }) : Response.json({ error: "Not found" }, { status: 404 });
+}

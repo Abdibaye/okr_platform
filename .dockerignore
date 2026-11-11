@@ -1,0 +1,14 @@
+.git
+.neander-creation.json*
+.env
+.env.*
+!.env.example
+**/node_modules
+**/.next
+**/dist
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/*.tsbuildinfo
+
+.neander/blocks

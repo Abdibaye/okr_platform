@@ -1,0 +1,53 @@
+# Complete deployment recipe for this block and its prerequisites.
+# Merge with an existing recipe; retain application-specific requirements.
+services:
+  web:
+    build:
+      context: ..
+      dockerfile: .neander/Dockerfile
+    ports:
+    - 8080:8080
+    secrets:
+    - neander_environment
+    x-google-cloudrun:
+      ingress-container: true
+secrets:
+  neander_environment:
+    file: /run/neander/secrets/neander_environment
+x-neander:
+  ingress:
+    service: web
+    port: 8080
+    root_probe: /api/health
+  environment:
+  - service: web
+    name: DATABASE_URL
+    required: true
+    source: provisioned
+    provider: Neon
+  - service: web
+    name: BETTER_AUTH_URL
+    required: true
+    source: provisioned
+    provider: Neander
+    binding: public_origin
+  - service: web
+    name: BETTER_AUTH_SECRET
+    required: true
+    source: generated
+    provider: null
+    generator: opaque-random
+  - service: web
+    name: GOOGLE_CLIENT_ID
+    required: true
+    source: user
+    provider: null
+  - service: web
+    name: GOOGLE_CLIENT_SECRET
+    required: true
+    source: user
+    provider: null
+  probes:
+  - path: /api/health
+    success_status_range: 2xx
+  migration: nextjs-drizzle

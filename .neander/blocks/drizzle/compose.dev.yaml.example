@@ -1,0 +1,19 @@
+# Local development only. Never use these credentials for production.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: neander_dev
+      POSTGRES_PASSWORD: neander_dev_only
+      POSTGRES_DB: neander_dev
+    ports:
+      - "127.0.0.1:${PGPORT:-55432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+volumes:
+  postgres_data:
