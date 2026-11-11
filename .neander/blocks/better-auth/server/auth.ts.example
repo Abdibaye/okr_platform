@@ -1,0 +1,20 @@
+import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "@better-auth/drizzle-adapter";
+import { getDb } from "./db";
+function required(name: string) {
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} is required`);
+  return value;
+}
+function createAuth() {
+  const baseURL = process.env.BETTER_AUTH_URL || (process.env.NODE_ENV !== "production" ? "http://localhost:3000" : required("BETTER_AUTH_URL"));
+  return betterAuth({
+    baseURL, trustedOrigins: [new URL(baseURL).origin], secret: required("BETTER_AUTH_SECRET"),
+    database: drizzleAdapter(getDb(), { provider: "pg" }),
+    socialProviders: { google: { clientId: required("GOOGLE_CLIENT_ID"), clientSecret: required("GOOGLE_CLIENT_SECRET") } },
+    account: { encryptOAuthTokens: true, accountLinking: { enabled: false } },
+    session: { expiresIn: 60 * 60 * 24 * 7, updateAge: 60 * 60 * 24 },
+  });
+}
+let auth: ReturnType<typeof createAuth> | undefined;
+export function getAuth() { return auth ??= createAuth(); }

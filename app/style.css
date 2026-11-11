@@ -1,0 +1,4 @@
+body { margin: 0; color: #182225; background: #f7f8f5; font: 18px system-ui, sans-serif; }
+main { max-width: 680px; margin: 16vh auto; padding: 2rem; }
+h1 { font-size: 3rem; letter-spacing: -0.04em; }
+a { color: inherit; }
