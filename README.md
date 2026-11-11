@@ -1,6 +1,6 @@
 # Next.js + TypeScript
 
-Use Node 24 and pnpm 11.18.0. Run `pnpm install --frozen-lockfile`, then `pnpm dev` (http://localhost:3000). `pnpm check` checks types; `pnpm build` prepares the production standalone output. No credentials or external services are required.
+Use Node 24 and pnpm 11.18.0. Run `pnpm install --frozen-lockfile`, copy the local database credentials into gitignored `.env.local`, then apply migrations with `pnpm db:migrate`, seed with `pnpm db:seed`, and run `pnpm dev` (http://localhost:3000). `pnpm check` checks types; `pnpm build` prepares the production standalone output. Demo credentials are `admin@demo.test / Demo1234!` and `member@demo.test / Demo1234!`.
 
 Publish uses `.neander/compose.yaml`. For local production verification, run `docker build -f .neander/Dockerfile -t my-next-app .` and `docker run --rm -p 8080:8080 my-next-app`. `/api/health` returns JSON. `public/` and `.next/static` are copied explicitly into the runtime image.
 
