@@ -7,10 +7,36 @@ export interface WorkspaceUser {
   email: string;
 }
 
+export interface CycleSummary {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  status: CycleStatus;
+  finalReflection: string;
+  objectiveCount: number;
+  completedObjectives: number;
+  keyResultCount: number;
+  averageProgress: number;
+}
+
+export interface PeriodComparison {
+  baseCycleId: string;
+  baseCycleName: string;
+  targetCycleId: string;
+  targetCycleName: string;
+  progressDelta: number;
+  objectiveCountDelta: number;
+  completedObjectivesDelta: number;
+  keyResultCountDelta: number;
+}
+
 export interface Workspace {
   user: WorkspaceUser;
   company: { id: string; name: string; role: Role };
   cycles: Cycle[];
+  summaries: CycleSummary[];
+  comparisons: PeriodComparison[];
   audit: AuditLog[];
 }
 
@@ -21,6 +47,7 @@ export interface Cycle {
   endDate: string;
   status: CycleStatus;
   finalReflection: string;
+  version: number;
   objectives: Objective[];
 }
 
@@ -43,6 +70,7 @@ export interface KeyResult {
   target: string;
   current: string;
   progress: string;
+  version: number;
 }
 
 export interface AuditLog {

@@ -2,6 +2,7 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { contextOr401, isResponse } from "@/server/api-utils";
 import { getDb } from "@/server/db";
+import { buildPeriodComparisons } from "@/server/okr-math";
 import { auditLogs, keyResults, objectives, okrCycles } from "@/server/schema";
 
 export const dynamic = "force-dynamic";
@@ -48,16 +49,21 @@ export async function GET() {
     objectivesByCycle.set(objective.cycleId, list);
   }
 
+  const hydratedCycles = cycles.map((cycle) => ({
+    ...cycle,
+    objectives: (objectivesByCycle.get(cycle.id) ?? []).map((objective) => ({
+      ...objective,
+      keyResults: resultsByObjective.get(objective.id) ?? [],
+    })),
+  }));
+  const { summaries, comparisons } = buildPeriodComparisons(hydratedCycles);
+
   return NextResponse.json({
     user: { name: context.session.user.name, email: context.session.user.email },
     company: { id: context.companyId, name: context.companyName, role: context.role },
-    cycles: cycles.map((cycle) => ({
-      ...cycle,
-      objectives: (objectivesByCycle.get(cycle.id) ?? []).map((objective) => ({
-        ...objective,
-        keyResults: resultsByObjective.get(objective.id) ?? [],
-      })),
-    })),
+    cycles: hydratedCycles,
+    summaries,
+    comparisons,
     audit: auditRows,
   }, { headers: { "Cache-Control": "no-store" } });
 }

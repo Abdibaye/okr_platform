@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { contextOr401, errorResponse, isResponse, readJson } from "@/server/api-utils";
+import { contextOr401, errorResponse, isResponse, isUuid, readJson } from "@/server/api-utils";
 import { getDb } from "@/server/db";
 import { keyResults, objectives, okrCycles } from "@/server/schema";
 import { calculateProgress } from "@/server/okr-math";
@@ -18,8 +18,8 @@ export async function POST(request: Request) {
   const baseline = typeof body?.baseline === "number" ? body.baseline : Number.NaN;
   const target = typeof body?.target === "number" ? body.target : Number.NaN;
   const current = typeof body?.current === "number" ? body.current : baseline;
-  if (!objectiveId || !title || title.length > 240 || unit.length > 24) {
-    return errorResponse("Provide a key result title and objective.", 400);
+  if (!objectiveId || !isUuid(objectiveId) || !title || title.length > 240 || unit.length > 24) {
+    return errorResponse("Provide a key result title and valid objective.", 400);
   }
   if (metricType !== "numeric" && metricType !== "percentage" && metricType !== "currency" && metricType !== "binary") {
     return errorResponse("Choose a valid metric type.", 400);
@@ -37,11 +37,14 @@ export async function POST(request: Request) {
   const database = getDb();
   const [objective] = await database.select({
     id: objectives.id,
+    cycleStatus: okrCycles.status,
   }).from(objectives)
     .innerJoin(okrCycles, and(eq(okrCycles.id, objectives.cycleId), eq(okrCycles.companyId, context.companyId)))
-    .where(and(eq(objectives.id, objectiveId), eq(objectives.companyId, context.companyId), eq(okrCycles.status, "open")))
+    .where(and(eq(objectives.id, objectiveId), eq(objectives.companyId, context.companyId)))
     .limit(1);
-  if (!objective) return errorResponse("Open objective not found in this workspace.", 404);
+  if (!objective) return errorResponse("Objective not found in this workspace.", 404);
+  if (objective.cycleStatus === "closed") return errorResponse("This cycle is closed; key results cannot be added.", 403);
+  if (objective.cycleStatus !== "open") return errorResponse("Open the cycle before adding key results.", 403);
 
   const [keyResult] = await database.transaction(async (transaction) => {
     const [created] = await transaction.insert(keyResults).values({

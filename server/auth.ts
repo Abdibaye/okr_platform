@@ -81,8 +81,12 @@ function createAuth() {
   const baseURL = process.env.BETTER_AUTH_URL || (isProduction ? required("BETTER_AUTH_URL") : "http://127.0.0.1:3000");
   const trustedOrigins = [new URL(baseURL).origin];
   if (!isProduction) {
-    for (const origin of ["http://localhost:3000", "http://127.0.0.1:3000"]) {
-      if (!trustedOrigins.includes(origin)) trustedOrigins.push(origin);
+    const devPorts = new Set(["3000", ...(process.env.PORT ? [process.env.PORT] : [])]);
+    for (const port of devPorts) {
+      for (const host of ["localhost", "127.0.0.1"]) {
+        const origin = `http://${host}:${port}`;
+        if (!trustedOrigins.includes(origin)) trustedOrigins.push(origin);
+      }
     }
   }
 
