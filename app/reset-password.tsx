@@ -50,9 +50,9 @@ export function ResetPasswordScreen({
   }
 
   return (
-    <main className="mx-auto grid min-h-screen max-w-md place-items-center p-6">
-      <div className="w-full space-y-4">
-        <Card className="w-full">
+    <main className="grid min-h-dvh place-items-center bg-auth-canvas px-4 py-8">
+      <div className="w-full max-w-md">
+        <Card className="rounded-xl border-border shadow-none">
           <CardHeader>
             <CardTitle>Choose a new password</CardTitle>
             <CardDescription>
@@ -65,36 +65,20 @@ export function ResetPasswordScreen({
             {linkInvalid ? (
               <Alert variant="destructive">
                 <AlertTitle>Invalid or expired reset link</AlertTitle>
-                <AlertDescription>
-                  Request a new password reset link from the sign-in screen.
-                </AlertDescription>
+                <AlertDescription>Request a new password reset link from the sign-in screen.</AlertDescription>
               </Alert>
             ) : (
               <form className="grid gap-3" onSubmit={submit}>
                 <Field>
                   <FieldLabel htmlFor="new-password">New password</FieldLabel>
-                  <Input
-                    id="new-password"
-                    type="password"
-                    required
-                    minLength={8}
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                  />
+                  <Input id="new-password" type="password" required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" />
                 </Field>
                 <Field>
                   <FieldLabel htmlFor="confirm-password">Confirm new password</FieldLabel>
-                  <Input
-                    id="confirm-password"
-                    type="password"
-                    required
-                    minLength={8}
-                    value={confirmPassword}
-                    onChange={(event) => setConfirmPassword(event.target.value)}
-                  />
+                  <Input id="confirm-password" type="password" required minLength={8} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} autoComplete="new-password" />
                 </Field>
                 <Button type="submit" disabled={busy}>Update password</Button>
-                {error && <p className="text-sm text-destructive">{error}</p>}
+                {error && <Alert variant="destructive"><AlertTitle>Check your details</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
               </form>
             )}
             <a className="inline-block text-sm text-primary underline" href="/">Back to sign in</a>

@@ -21,6 +21,12 @@ function deltaVariant(value: number): "default" | "secondary" | "destructive" {
   return "secondary";
 }
 
+function progressTone(progress: number) {
+  if (progress >= 70) return "on_track" as const;
+  if (progress >= 40) return "at_risk" as const;
+  return "off_track" as const;
+}
+
 export function PeriodComparisonSection({
   summaries,
   comparisons,
@@ -49,7 +55,7 @@ export function PeriodComparisonSection({
   const sequentialByTarget = new Map(comparisons.map((item) => [item.targetCycleId, item]));
 
   return (
-    <Card>
+    <Card className="border-border shadow-none">
       <CardHeader>
         <CardTitle>Period comparisons</CardTitle>
         <CardDescription>Compare progress, completion, and final reflections across cycles.</CardDescription>
@@ -92,51 +98,51 @@ export function PeriodComparisonSection({
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-lg border p-3">
+                <div className="rounded-lg border border-border bg-card p-3">
                   <p className="text-xs text-muted-foreground">Average progress</p>
                   <div className="mt-1 flex items-center justify-between gap-2">
-                    <span className="text-lg font-semibold">{targetSummary.averageProgress.toFixed(1)}%</span>
+                    <span className="text-lg font-semibold tabular-nums">{targetSummary.averageProgress.toFixed(1)}%</span>
                     <Badge variant={deltaVariant(activeComparison.progressDelta)}>
                       {formatDelta(activeComparison.progressDelta, " pts")}
                     </Badge>
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">vs {baseSummary.averageProgress.toFixed(1)}%</p>
+                  <p className="mt-1 text-xs tabular-nums text-muted-foreground">vs {baseSummary.averageProgress.toFixed(1)}%</p>
                 </div>
-                <div className="rounded-lg border p-3">
+                <div className="rounded-lg border border-border bg-card p-3">
                   <p className="text-xs text-muted-foreground">Objectives</p>
                   <div className="mt-1 flex items-center justify-between gap-2">
-                    <span className="text-lg font-semibold">{targetSummary.objectiveCount}</span>
+                    <span className="text-lg font-semibold tabular-nums">{targetSummary.objectiveCount}</span>
                     <Badge variant={deltaVariant(activeComparison.objectiveCountDelta)}>
                       {formatDelta(activeComparison.objectiveCountDelta)}
                     </Badge>
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">vs {baseSummary.objectiveCount}</p>
+                  <p className="mt-1 text-xs tabular-nums text-muted-foreground">vs {baseSummary.objectiveCount}</p>
                 </div>
-                <div className="rounded-lg border p-3">
+                <div className="rounded-lg border border-border bg-card p-3">
                   <p className="text-xs text-muted-foreground">Completed objectives</p>
                   <div className="mt-1 flex items-center justify-between gap-2">
-                    <span className="text-lg font-semibold">{targetSummary.completedObjectives}</span>
+                    <span className="text-lg font-semibold tabular-nums">{targetSummary.completedObjectives}</span>
                     <Badge variant={deltaVariant(activeComparison.completedObjectivesDelta)}>
                       {formatDelta(activeComparison.completedObjectivesDelta)}
                     </Badge>
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">vs {baseSummary.completedObjectives}</p>
+                  <p className="mt-1 text-xs tabular-nums text-muted-foreground">vs {baseSummary.completedObjectives}</p>
                 </div>
-                <div className="rounded-lg border p-3">
+                <div className="rounded-lg border border-border bg-card p-3">
                   <p className="text-xs text-muted-foreground">Key results</p>
                   <div className="mt-1 flex items-center justify-between gap-2">
-                    <span className="text-lg font-semibold">{targetSummary.keyResultCount}</span>
+                    <span className="text-lg font-semibold tabular-nums">{targetSummary.keyResultCount}</span>
                     <Badge variant={deltaVariant(activeComparison.keyResultCountDelta)}>
                       {formatDelta(activeComparison.keyResultCountDelta)}
                     </Badge>
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">vs {baseSummary.keyResultCount}</p>
+                  <p className="mt-1 text-xs tabular-nums text-muted-foreground">vs {baseSummary.keyResultCount}</p>
                 </div>
               </div>
 
               <div className="grid gap-3 md:grid-cols-2">
                 {[baseSummary, targetSummary].map((period, index) => (
-                  <div key={`${period.id}-${index}`} className="space-y-2 rounded-lg border p-3">
+                  <div key={`${period.id}-${index}`} className="space-y-2 rounded-lg border border-border bg-card p-3">
                     <div className="flex items-center justify-between gap-2">
                       <div>
                         <p className="font-medium">{period.name}</p>
@@ -144,7 +150,7 @@ export function PeriodComparisonSection({
                       </div>
                       <Badge variant="outline">{period.status}</Badge>
                     </div>
-                    <Progress value={period.averageProgress} />
+                    <Progress value={period.averageProgress} tone={progressTone(period.averageProgress)} aria-label={`${period.name} average progress`} />
                     <p className="text-xs text-muted-foreground">
                       Final reflection: {period.finalReflection || "No reflection recorded."}
                     </p>
@@ -155,51 +161,53 @@ export function PeriodComparisonSection({
           )
         )}
 
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Period</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Objectives</TableHead>
-              <TableHead>Completed</TableHead>
-              <TableHead>Key results</TableHead>
-              <TableHead>Avg progress</TableHead>
-              <TableHead>vs prior period</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {summaries.map((summary) => {
-              const previousDelta = sequentialByTarget.get(summary.id);
-              return (
-                <TableRow key={summary.id}>
-                  <TableCell>
-                    <p className="font-medium">{summary.name}</p>
-                    <p className="text-xs text-muted-foreground">{summary.startDate} → {summary.endDate}</p>
-                  </TableCell>
-                  <TableCell><Badge variant="outline">{summary.status}</Badge></TableCell>
-                  <TableCell>{summary.objectiveCount}</TableCell>
-                  <TableCell>{summary.completedObjectives}</TableCell>
-                  <TableCell>{summary.keyResultCount}</TableCell>
-                  <TableCell>{summary.averageProgress.toFixed(1)}%</TableCell>
-                  <TableCell>
-                    {previousDelta ? (
-                      <Badge variant={deltaVariant(previousDelta.progressDelta)}>
-                        {formatDelta(previousDelta.progressDelta, " pts")}
-                      </Badge>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-            {!summaries.length && (
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+          <Table className="min-w-[720px] border-border sm:min-w-0">
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={7} className="text-muted-foreground">No periods created yet.</TableCell>
+                <TableHead>Period</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Objectives</TableHead>
+                <TableHead className="text-right">Completed</TableHead>
+                <TableHead className="text-right">Key results</TableHead>
+                <TableHead className="text-right">Avg progress</TableHead>
+                <TableHead className="text-right">vs prior period</TableHead>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {summaries.map((summary) => {
+                const previousDelta = sequentialByTarget.get(summary.id);
+                return (
+                  <TableRow key={summary.id}>
+                    <TableCell>
+                      <p className="font-medium">{summary.name}</p>
+                      <p className="text-xs tabular-nums text-muted-foreground">{summary.startDate} → {summary.endDate}</p>
+                    </TableCell>
+                    <TableCell><Badge variant="outline">{summary.status}</Badge></TableCell>
+                    <TableCell className="text-right tabular-nums">{summary.objectiveCount}</TableCell>
+                    <TableCell className="text-right tabular-nums">{summary.completedObjectives}</TableCell>
+                    <TableCell className="text-right tabular-nums">{summary.keyResultCount}</TableCell>
+                    <TableCell className="text-right tabular-nums">{summary.averageProgress.toFixed(1)}%</TableCell>
+                    <TableCell className="text-right">
+                      {previousDelta ? (
+                        <Badge variant={deltaVariant(previousDelta.progressDelta)}>
+                          {formatDelta(previousDelta.progressDelta, " pts")}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+              {!summaries.length && (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-muted-foreground">No periods created yet.</TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   );

@@ -25,16 +25,15 @@ export function AuthScreen({ initialNotice = null }: { initialNotice?: string | 
     setBusy(true);
     setError(null);
     setMessage(null);
-    setResetLink(null);
     try {
       const endpoint = mode === "login" ? "/api/auth/sign-in/email" : "/api/auth/sign-up/email";
       const body = mode === "login" ? { email, password } : { name, email, password };
       const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.message ?? data.error ?? "Authentication failed.");
-      window.location.href = "/dashboard";
+      if (!response.ok) throw new Error(data.message ?? data.error ?? "Could not sign you in.");
+      window.location.href = "/okr";
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Authentication failed.");
+      setError(caught instanceof Error ? caught.message : "Could not sign you in.");
     } finally {
       setBusy(false);
     }
@@ -48,43 +47,68 @@ export function AuthScreen({ initialNotice = null }: { initialNotice?: string | 
     try {
       const response = await fetch("/api/recovery-link", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error ?? "Could not request a reset link.");
+      if (!response.ok) throw new Error(data.error ?? "Could not create a reset link.");
+      setResetLink(data.link);
       setMessage(data.message);
-      setResetLink(data.resetLink ?? null);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not request a reset link.");
+      setError(caught instanceof Error ? caught.message : "Could not create a reset link.");
     } finally {
       setBusy(false);
     }
   }
 
   function switchMode(nextMode: string) {
-    setMode(nextMode as Mode);
-    setError(null);
-    setResetLink(null);
+    if (nextMode === "login" || nextMode === "signup") {
+      setMode(nextMode);
+      setError(null);
+      setMessage(null);
+      setResetLink(null);
+    }
   }
 
+  const recoveryReady = Boolean(resetLink);
+
   return (
-    <main className="mx-auto grid min-h-screen max-w-lg place-items-center p-6">
-      <div className="w-full space-y-4">
-        <div className="text-center"><h1>OKR platform</h1><p className="text-muted-foreground">Sign in with a demo account or create a member account.</p></div>
-        <Card>
-          <CardHeader><CardTitle>Welcome</CardTitle><CardDescription>Demo admin: admin@demo.test / Demo1234! · Demo member: member@demo.test / Demo1234!</CardDescription></CardHeader>
+    <main className="grid min-h-dvh place-items-center bg-auth-canvas px-4 py-8">
+      <div className="w-full max-w-md space-y-4">
+        <Card className="gap-6 rounded-xl border-border shadow-none">
+          <CardHeader>
+            <CardTitle className="text-2xl">Welcome to your OKR workspace</CardTitle>
+            <CardDescription>Plan, track, and check in on company goals.</CardDescription>
+          </CardHeader>
           <CardContent>
-            <Tabs value={mode} onValueChange={switchMode}>
-              <TabsList className="w-full"><TabsTrigger value="login" className="flex-1">Sign in</TabsTrigger><TabsTrigger value="signup" className="flex-1">Sign up</TabsTrigger></TabsList>
+            <Tabs defaultValue="login" onValueChange={switchMode}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="login">Sign in</TabsTrigger>
+                <TabsTrigger value="signup">Sign up</TabsTrigger>
+              </TabsList>
               <TabsContent value="login">
                 <form className="mt-4 grid gap-3" onSubmit={submit}>
-                  <Field><FieldLabel htmlFor="email">Email</FieldLabel><Input id="email" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} /></Field>
-                  <Field><FieldLabel htmlFor="password">Password</FieldLabel><Input id="password" type="password" required value={password} onChange={(event) => setPassword(event.target.value)} /></Field>
+                  <Field>
+                    <FieldLabel htmlFor="email">Email</FieldLabel>
+                    <Input id="email" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="password">Password</FieldLabel>
+                    <Input id="password" type="password" required value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" />
+                  </Field>
                   <Button type="submit" disabled={busy}>Sign in</Button>
                 </form>
               </TabsContent>
               <TabsContent value="signup">
                 <form className="mt-4 grid gap-3" onSubmit={submit}>
-                  <Field><FieldLabel htmlFor="name">Name</FieldLabel><Input id="name" required value={name} onChange={(event) => setName(event.target.value)} /></Field>
-                  <Field><FieldLabel htmlFor="signup-email">Email</FieldLabel><Input id="signup-email" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} /></Field>
-                  <Field><FieldLabel htmlFor="signup-password">Password</FieldLabel><Input id="signup-password" type="password" required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} /></Field>
+                  <Field>
+                    <FieldLabel htmlFor="name">Name</FieldLabel>
+                    <Input id="name" required value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="signup-email">Email</FieldLabel>
+                    <Input id="signup-email" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="signup-password">Password</FieldLabel>
+                    <Input id="signup-password" type="password" required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" />
+                  </Field>
                   <Button type="submit" disabled={busy}>Create account</Button>
                 </form>
               </TabsContent>
@@ -94,11 +118,12 @@ export function AuthScreen({ initialNotice = null }: { initialNotice?: string | 
         </Card>
         {(error || message) && (
           <Alert variant={error ? "destructive" : "default"}>
-            <AlertTitle>{error ? "Please try again" : resetLink ? "Recovery link ready" : "Notice"}</AlertTitle>
+            <AlertTitle>{error ? "Please try again" : recoveryReady ? "Recovery link ready" : "Notice"}</AlertTitle>
             <AlertDescription>{error ?? message}</AlertDescription>
             {resetLink && <a className="text-primary underline" href={resetLink}>Open password reset link</a>}
           </Alert>
         )}
+        <p className="text-center text-xs text-muted-foreground">Demo credentials: admin@demo.test / Demo1234! · member@demo.test / Demo1234!</p>
       </div>
     </main>
   );
