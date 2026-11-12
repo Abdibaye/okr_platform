@@ -8,9 +8,9 @@
     "node": ">=24 <25"
   },
   "scripts": {
-    "dev": "node init && next dev --hostname 127.0.0.1",
-    "build": "node init && next build && node .neander/prepare-standalone.mjs",
-    "start": "node init && node .next/standalone/server.js",
+    "dev": "next dev --hostname 127.0.0.1",
+    "build": "next build && node .neander/prepare-standalone.mjs",
+    "start": "node .next/standalone/server.js",
     "check": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file=.env.local .neander/migrate.mjs",
