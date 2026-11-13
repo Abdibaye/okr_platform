@@ -17,6 +17,7 @@
   --color-brand-indigo-hover: var(--brand-indigo-hover);
   --color-brand-teal: var(--brand-teal);
   --color-brand-teal-soft: var(--brand-teal-soft);
+  --color-brand-teal-ink: var(--brand-teal-ink);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -145,6 +146,7 @@
   --brand-indigo-hover: #42296a;
   --brand-teal: #4dc7d1;
   --brand-teal-soft: #cee6f1;
+  --brand-teal-ink: #0e7c86;
   --background: #f9fafb;
   --foreground: #2e2f2f;
   --card: #ffffff;
@@ -216,6 +218,7 @@
   --brand-indigo-hover: #e5ddf7;
   --brand-teal: #6acfd9;
   --brand-teal-soft: rgba(77, 199, 209, 0.18);
+  --brand-teal-ink: #6acfd9;
   --background: #0f1420;
   --foreground: #e9ebee;
   --card: #161d2d;
