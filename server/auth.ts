@@ -1,7 +1,9 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { betterAuth } from "better-auth";
+import { and, desc, eq, gt } from "drizzle-orm";
 import { getDb } from "./db";
-import { companyMemberships } from "./schema";
+import { acceptInvitation } from "./people";
+import { companyMemberships, invitations } from "./schema";
 
 export const demoCompanyId = "6e2c4a1e-89a1-4d57-9c37-832473fd28d6";
 
@@ -107,7 +109,19 @@ function createAuth() {
       user: {
         create: {
           after: async (user) => {
-            await getDb().insert(companyMemberships).values({
+            const database = getDb();
+            const joined = await database.transaction(async (transaction) => {
+              const [invitation] = await transaction.select().from(invitations).where(and(
+                eq(invitations.email, user.email.trim().toLowerCase()),
+                eq(invitations.status, "pending"),
+                gt(invitations.expiresAt, new Date()),
+              )).orderBy(desc(invitations.createdAt)).limit(1).for("update");
+              if (!invitation) return false;
+              await acceptInvitation(transaction, invitation, user.id);
+              return true;
+            });
+            if (joined) return;
+            await database.insert(companyMemberships).values({
               companyId: demoCompanyId,
               userId: user.id,
               role: "member",

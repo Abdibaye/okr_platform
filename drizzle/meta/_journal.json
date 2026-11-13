@@ -15,6 +15,13 @@
       "when": 1794429558266,
       "tag": "0001_salty_spacker_dave",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794552818851,
+      "tag": "0002_brainy_selene",
+      "breakpoints": true
     }
   ]
 }
