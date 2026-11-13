@@ -287,7 +287,7 @@ export function PeopleSection({ role, currentUserId }: { role: Role; currentUser
   const sortedMembers = [...members].sort((a, b) => Number(b.isActive) - Number(a.isActive) || a.name.localeCompare(b.name));
 
   return (
-    <Card>
+    <Card className="shadow-none">
       <CardHeader>
         <CardTitle>People</CardTitle>
         <CardDescription>

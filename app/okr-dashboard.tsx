@@ -292,6 +292,25 @@ export function OkrDashboard() {
     await send(`/api/objectives/${objective.id}`, "PATCH", { version: objective.version, title: `${objective.title} — stale edit` }, "Conflict shown.");
   }
 
+  function exportCycle() {
+    if (!selectedCycle) return;
+    const rows = [["Objective", "Objective progress %", "Key result", "Baseline", "Current", "Target", "Unit", "Key result progress %"]];
+    for (const objective of selectedCycle.objectives) {
+      const objectiveProgress = objective.progress === null ? "" : Number(objective.progress).toFixed(1);
+      if (!objective.keyResults.length) rows.push([objective.title, objectiveProgress, "", "", "", "", "", ""]);
+      for (const keyResult of objective.keyResults) {
+        rows.push([objective.title, objectiveProgress, keyResult.title, keyResult.baseline, keyResult.current, keyResult.target, keyResult.unit, Number(keyResult.progress).toFixed(1)]);
+      }
+    }
+    const blob = new Blob([rows.map((row) => row.map(csvCell).join(",")).join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${selectedCycle.name.replace(/[^\w-]+/g, "-") || "cycle"}-okrs.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function logout() {
     await fetch("/api/auth/sign-out", { method: "POST" });
     window.location.href = "/";
@@ -321,13 +340,75 @@ export function OkrDashboard() {
   const selectedCheckInDraft = selectedCheckInKr ? checkInDrafts[selectedCheckInKr.id] : undefined;
 
   return (
-    <AppShell
-      workspace={workspace}
-      unreadCount={workspace.audit.length}
-      onSignOut={logout}
-      search={search}
-      onSearchChange={setSearch}
-    >
+    <AppShell workspace={workspace} unreadCount={workspace.audit.length} onSignOut={logout}>
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-3xl lg:text-4xl">Dashboard</h1>
+          <p className="mt-1 truncate text-sm text-muted-foreground">{workspace.company.name} · OKR workspace</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {canManage && (
+            <Button
+              disabled={!selectedOpenCycle}
+              title={!selectedOpenCycle ? "Open a cycle before adding objectives." : undefined}
+              onClick={() => focusField("objective-title")}
+            >
+              <Plus aria-hidden="true" /> New objective
+            </Button>
+          )}
+          <Button
+            variant={canManage ? "outline" : "default"}
+            disabled={!selectedOpenCycle || !selectedCycle?.objectives.length}
+            title={!selectedOpenCycle ? "Open a cycle before adding key results." : !selectedCycle?.objectives.length ? "Add an objective first." : undefined}
+            onClick={() => focusField("kr-title")}
+          >
+            <Plus aria-hidden="true" /> New key result
+          </Button>
+        </div>
+      </header>
+
+      <div className="flex flex-col gap-4 rounded-xl border bg-card px-5 py-4 xl:flex-row xl:items-center xl:justify-between">
+        <p className="flex flex-wrap items-center gap-2 text-sm italic text-muted-foreground">
+          {selectedCycle ? (
+            <>
+              <span>Displaying data from {formatDate(selectedCycle.startDate)} to {formatDate(selectedCycle.endDate)}</span>
+              <Badge variant="outline" className="not-italic capitalize">{selectedCycle.status}</Badge>
+              <Badge variant="secondary" className="font-mono not-italic tabular-nums">v{selectedCycle.version}</Badge>
+            </>
+          ) : (
+            <span>No cycle yet — {canManage ? "create one in Cycles below to get started." : "ask a manager or admin to create one."}</span>
+          )}
+        </p>
+        <div className="grid gap-2 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)_auto] sm:items-center">
+          <Select value={selectedCycleId} onValueChange={setSelectedCycleId} disabled={!cycles.length}>
+            <SelectTrigger id="cycle-select" className="w-full" aria-label="Cycle">
+              <SelectValue placeholder="Choose a cycle" />
+            </SelectTrigger>
+            <SelectContent>
+              {cycles.map((cycle) => (
+                <SelectItem key={cycle.id} value={cycle.id}>
+                  {cycle.name} ({cycle.status})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+            <Input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search objectives and key results"
+              aria-label="Search objectives and key results"
+              className="pl-9 sm:min-w-64"
+            />
+          </div>
+          <Button variant="outline" onClick={exportCycle} disabled={!selectedCycle?.objectives.length}>
+            <Download aria-hidden="true" /> Export CSV
+          </Button>
+        </div>
+      </div>
+
       {feedback && (
         <Alert variant={feedback.tone === "error" ? "destructive" : "default"}>
           <AlertTitle>{feedback.tone === "error" ? "Action blocked" : "Done"}</AlertTitle>
@@ -335,141 +416,17 @@ export function OkrDashboard() {
         </Alert>
       )}
 
-      <div id="my-goals" className="sticky top-[104px] z-20 -mx-4 rounded-xl border bg-card/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
-        <div className="grid gap-3 md:grid-cols-[2fr_1fr] md:items-center">
-          <Field>
-            <FieldLabel htmlFor="cycle-select" className="text-xs text-muted-foreground">Active cycle</FieldLabel>
-            <Select value={selectedCycleId} onValueChange={setSelectedCycleId}>
-              <SelectTrigger id="cycle-select" className="w-full">
-                <SelectValue placeholder="Choose a cycle" />
-              </SelectTrigger>
-              <SelectContent>
-                {cycles.map((cycle) => (
-                  <SelectItem key={cycle.id} value={cycle.id}>
-                    {cycle.name} ({cycle.status})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-          {selectedCycle && (
-            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground md:justify-end">
-              <Badge variant="outline">{selectedCycle.status}</Badge>
-              <span>{selectedCycle.startDate} → {selectedCycle.endDate}</span>
-              <Badge variant="secondary" className="font-mono tabular-nums">v{selectedCycle.version}</Badge>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <section id="company-okrs" className="grid gap-4 lg:grid-cols-2">
-        <Card className="border-accent/60">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              Cycle setup
-              <Badge className="bg-accent text-accent-foreground">Governance</Badge>
-            </CardTitle>
-            <CardDescription>Cycles start as drafts. Open one before adding objectives.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form className="grid gap-3" onSubmit={createCycle}>
-              <Field>
-                <FieldLabel htmlFor="cycle-name">Name</FieldLabel>
-                <Input id="cycle-name" required value={cycleName} onChange={(event) => setCycleName(event.target.value)} disabled={busy || !canManage} />
-              </Field>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Field>
-                  <FieldLabel htmlFor="cycle-start">Start</FieldLabel>
-                  <Input id="cycle-start" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} disabled={busy || !canManage} />
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="cycle-end">End</FieldLabel>
-                  <Input id="cycle-end" type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} disabled={busy || !canManage} />
-                </Field>
-              </div>
-              <Button type="submit" disabled={busy || !canManage} className="bg-brand-indigo text-white hover:bg-brand-indigo-hover">
-                Create draft cycle
-              </Button>
-              {!canManage && <p className="text-xs text-muted-foreground">Managers and admins can create cycles.</p>}
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card className="border-accent/60">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              Cycle controls
-              <Badge className="bg-accent text-accent-foreground">Governance</Badge>
-            </CardTitle>
-            <CardDescription>Open, close, and admin-reopen cycles with audit reasons and final reflections.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Field>
-              <FieldLabel htmlFor="cycle-reflection">Final reflection</FieldLabel>
-              <Textarea
-                id="cycle-reflection"
-                value={reflectionDraft}
-                onChange={(event) => setReflectionDraft(event.target.value)}
-                disabled={busy || !canManage || !selectedOpenCycle}
-                placeholder={
-                  selectedCycle?.status === "closed"
-                    ? "Cycle is closed — reflection is locked until reopened by an admin."
-                    : "Summarize wins, misses, and learnings for this cycle..."
-                }
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="cycle-note">Close audit note</FieldLabel>
-              <Input id="cycle-note" value={openReason} onChange={(event) => setOpenReason(event.target.value)} disabled={busy || !canManage || !selectedOpenCycle} />
-            </Field>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="secondary"
-                disabled={busy || !canManage || selectedCycle?.status !== "draft"}
-                title={selectedCycle?.status !== "draft" ? "Only draft cycles can be opened." : undefined}
-                onClick={openCycle}
-              >
-                Open cycle
-              </Button>
-              <Button
-                variant="outline"
-                disabled={busy || !canManage || !selectedOpenCycle}
-                title={!selectedOpenCycle ? "Open the cycle before saving its reflection." : undefined}
-                onClick={saveReflection}
-              >
-                Save reflection
-              </Button>
-              <Button
-                disabled={busy || !canManage || selectedCycle?.status !== "open"}
-                title={selectedCycle?.status !== "open" ? "Only open cycles can be closed." : undefined}
-                onClick={closeCycle}
-              >
-                Close cycle
-              </Button>
-            </div>
-            <Field>
-              <FieldLabel htmlFor="reopen-reason">Admin reopen reason</FieldLabel>
-              <Input
-                id="reopen-reason"
-                value={reopenReason}
-                onChange={(event) => setReopenReason(event.target.value)}
-                placeholder="At least 3 characters"
-                disabled={busy || !isAdmin || selectedCycle?.status !== "closed"}
-              />
-            </Field>
-            <Button
-              disabled={busy || !isAdmin || selectedCycle?.status !== "closed" || reopenReason.trim().length < 3}
-              title={!isAdmin ? "Only admins can reopen a closed cycle." : selectedCycle?.status !== "closed" ? "Only closed cycles can be reopened." : "Enter an audit reason of at least 3 characters."}
-              onClick={reopenCycle}
-            >
-              Reopen with audit reason
-            </Button>
-          </CardContent>
-        </Card>
+      <section id="overview" className="scroll-mt-20 md:scroll-mt-6">
+        <DashboardOverview cycle={selectedCycle} summaries={workspace.summaries} comparisons={workspace.comparisons} teamCount={teamCount} />
       </section>
 
-      <section id="team-manager" className="grid gap-4 lg:grid-cols-2">
-        <Card>
+      <section id="my-goals" className="scroll-mt-20 space-y-4 md:scroll-mt-6">
+        <div className="space-y-1">
+          <h2 className="text-xl">Objectives &amp; key results</h2>
+          <p className="text-sm text-muted-foreground">Track objectives in the selected cycle and check in on their key results.</p>
+        </div>
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)] xl:items-start">
+        <Card className="shadow-none">
           <CardHeader>
             <CardTitle>Objectives</CardTitle>
             <CardDescription>Add or edit objectives in the selected open cycle (optimistic version locked).</CardDescription>
@@ -486,7 +443,7 @@ export function OkrDashboard() {
               {visibleObjectives.map((objective) => {
                 const objectiveProgress = objective.keyResults.length && objective.progress !== null ? Number(objective.progress) : null;
                 return (
-                  <article key={objective.id} className="rounded-xl border bg-card p-4">
+                  <article key={objective.id} id={`objective-${objective.id}`} className="scroll-mt-20 rounded-xl border bg-card p-4 md:scroll-mt-6">
                     <header className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                       <div className="min-w-0">
                         <h3 className="text-base font-semibold text-foreground">{objective.title}</h3>
@@ -557,7 +514,7 @@ export function OkrDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="shadow-none">
           <CardHeader>
             <CardTitle>Key results</CardTitle>
             <CardDescription>Progress clamps to 0–100, supports decreasing targets, and checks version on save.</CardDescription>
@@ -602,14 +559,127 @@ export function OkrDashboard() {
             <p className="text-xs text-muted-foreground">Use Check in on an objective’s key result to update its current value with version protection.</p>
           </CardContent>
         </Card>
+        </div>
       </section>
 
-      <section id="alignment">
+      <section id="company-okrs" className="scroll-mt-20 space-y-4 md:scroll-mt-6">
+        <div className="space-y-1">
+          <h2 className="text-xl">Cycles</h2>
+          <p className="text-sm text-muted-foreground">Create, open, close and reopen OKR cycles.</p>
+        </div>
+        <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+        <Card className="shadow-none">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              Cycle setup
+              <Badge className="bg-accent text-accent-foreground">Governance</Badge>
+            </CardTitle>
+            <CardDescription>Cycles start as drafts. Open one before adding objectives.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form className="grid gap-3" onSubmit={createCycle}>
+              <Field>
+                <FieldLabel htmlFor="cycle-name">Name</FieldLabel>
+                <Input id="cycle-name" required value={cycleName} onChange={(event) => setCycleName(event.target.value)} disabled={busy || !canManage} />
+              </Field>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field>
+                  <FieldLabel htmlFor="cycle-start">Start</FieldLabel>
+                  <Input id="cycle-start" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} disabled={busy || !canManage} />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="cycle-end">End</FieldLabel>
+                  <Input id="cycle-end" type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} disabled={busy || !canManage} />
+                </Field>
+              </div>
+              <Button type="submit" disabled={busy || !canManage}>
+                Create draft cycle
+              </Button>
+              {!canManage && <p className="text-xs text-muted-foreground">Managers and admins can create cycles.</p>}
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-none">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              Cycle controls
+              <Badge className="bg-accent text-accent-foreground">Governance</Badge>
+            </CardTitle>
+            <CardDescription>Open, close, and admin-reopen cycles with audit reasons and final reflections.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Field>
+              <FieldLabel htmlFor="cycle-reflection">Final reflection</FieldLabel>
+              <Textarea
+                id="cycle-reflection"
+                value={reflectionDraft}
+                onChange={(event) => setReflectionDraft(event.target.value)}
+                disabled={busy || !canManage || !selectedOpenCycle}
+                placeholder={
+                  selectedCycle?.status === "closed"
+                    ? "Cycle is closed — reflection is locked until reopened by an admin."
+                    : "Summarize wins, misses, and learnings for this cycle..."
+                }
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="cycle-note">Close audit note</FieldLabel>
+              <Input id="cycle-note" value={openReason} onChange={(event) => setOpenReason(event.target.value)} disabled={busy || !canManage || !selectedOpenCycle} />
+            </Field>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="secondary"
+                disabled={busy || !canManage || selectedCycle?.status !== "draft"}
+                title={selectedCycle?.status !== "draft" ? "Only draft cycles can be opened." : undefined}
+                onClick={openCycle}
+              >
+                Open cycle
+              </Button>
+              <Button
+                variant="outline"
+                disabled={busy || !canManage || !selectedOpenCycle}
+                title={!selectedOpenCycle ? "Open the cycle before saving its reflection." : undefined}
+                onClick={saveReflection}
+              >
+                Save reflection
+              </Button>
+              <Button
+                disabled={busy || !canManage || selectedCycle?.status !== "open"}
+                title={selectedCycle?.status !== "open" ? "Only open cycles can be closed." : undefined}
+                onClick={closeCycle}
+              >
+                Close cycle
+              </Button>
+            </div>
+            <Field>
+              <FieldLabel htmlFor="reopen-reason">Admin reopen reason</FieldLabel>
+              <Input
+                id="reopen-reason"
+                value={reopenReason}
+                onChange={(event) => setReopenReason(event.target.value)}
+                placeholder="At least 3 characters"
+                disabled={busy || !isAdmin || selectedCycle?.status !== "closed"}
+              />
+            </Field>
+            <Button
+              disabled={busy || !isAdmin || selectedCycle?.status !== "closed" || reopenReason.trim().length < 3}
+              title={!isAdmin ? "Only admins can reopen a closed cycle." : selectedCycle?.status !== "closed" ? "Only closed cycles can be reopened." : "Enter an audit reason of at least 3 characters."}
+              onClick={reopenCycle}
+            >
+              Reopen with audit reason
+            </Button>
+          </CardContent>
+        </Card>
+        </div>
+      </section>
+
+      <section id="alignment" className="scroll-mt-20 md:scroll-mt-6">
         <PeriodComparisonSection summaries={workspace.summaries} comparisons={workspace.comparisons} />
       </section>
 
-      <section id="reports">
-        <Card>
+      <section id="reports" className="scroll-mt-20 md:scroll-mt-6">
+        <Card className="shadow-none">
           <CardHeader>
             <CardTitle>Workspace audit log</CardTitle>
             <CardDescription>Cycle closes and admin reopens are recorded here.</CardDescription>
@@ -644,7 +714,7 @@ export function OkrDashboard() {
       </section>
 
       {canManage && (
-        <section id="people">
+        <section id="people" className="scroll-mt-20 md:scroll-mt-6">
           <PeopleSection role={workspace.company.role} currentUserId={workspace.user.id} />
         </section>
       )}
