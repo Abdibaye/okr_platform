@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, lt } from "drizzle-orm";
 import { getDb } from "./db";
+import { sendInvitationEmail } from "./mailer";
 import { auditLogs, companyMemberships, invitations, teamMemberships, teams } from "./schema";
 
 export type Transaction = Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0];
@@ -127,4 +128,24 @@ export async function acceptInvitation(transaction: Transaction, invitation: typ
     reason: `Invitation accepted by ${invitation.email}`,
     details: { role: invitation.role, teamId: invitation.teamId, managerId },
   });
+}
+
+/** Sends (or logs) the invitation link and records the delivery outcome on the invitation. */
+export async function deliverInvitation(request: Request, invitation: { id: string; email: string; token: string }, companyName: string, inviterName: string) {
+  const url = inviteUrl(request, invitation.token);
+  const delivery = await sendInvitationEmail({ to: invitation.email, url, companyName, inviterName });
+  await getDb().update(invitations).set({
+    emailDeliveryStatus: delivery.status,
+    emailError: delivery.error,
+  }).where(eq(invitations.id, invitation.id));
+  return { ...delivery, url };
+}
+
+/** Marks pending invitations past their expiry as expired so listings stay accurate. */
+export async function expireStaleInvitations(companyId: string) {
+  await getDb().update(invitations).set({ status: "expired" }).where(and(
+    eq(invitations.companyId, companyId),
+    eq(invitations.status, "pending"),
+    lt(invitations.expiresAt, new Date()),
+  ));
 }
