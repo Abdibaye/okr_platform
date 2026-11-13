@@ -227,7 +227,6 @@ export function AppShell({
             )}
           </div>
           <button
-            id="mobile-navigation-toggle"
             type="button"
             onClick={toggleExpanded}
             aria-label={expanded ? "Collapse sidebar" : "Expand sidebar"}
@@ -247,6 +246,7 @@ export function AppShell({
             type="button"
             className="rounded-md p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
             onClick={() => setDrawerOpen(true)}
+            id="mobile-navigation-toggle"
             aria-label="Open navigation menu"
             aria-expanded={drawerOpen}
           >
