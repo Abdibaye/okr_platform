@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { contextOr401, errorResponse, isResponse } from "@/server/api-utils";
 import { getDb } from "@/server/db";
@@ -17,6 +17,7 @@ export async function GET() {
     id: companyMemberships.id,
     userId: companyMemberships.userId,
     name: user.name,
+    nameEditable: sql<boolean>`not exists (select 1 from company_memberships other where other.user_id = ${user.id} and other.company_id <> ${context.companyId})`,
     email: user.email,
     role: companyMemberships.role,
     managerId: companyMemberships.managerId,

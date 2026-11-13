@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { Plus, X } from "lucide-react";
+import { AddUsers, deliveryLabels } from "@/components/okr/add-users";
+import { UserTable } from "@/components/okr/user-table";
+import { splitName } from "@/lib/people";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -15,23 +19,21 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import type { Role } from "@/app/types";
 
 const NONE = "__none__";
-const CSV_TEMPLATE = "email,name,role,manager_email,team_name,job_title,status\n";
 
 interface Member {
   id: string;
   userId: string;
   name: string;
+  nameEditable: boolean;
   email: string;
   role: Role;
   managerId: string | null;
@@ -63,24 +65,7 @@ interface Invitation {
   emailError: string | null;
 }
 
-interface ImportResult {
-  created: number;
-  updated: number;
-  invited: number;
-  dryRun?: boolean;
-  errors: { row: number; field: string; message: string }[];
-  rows?: { row: number; email: string; action: "update" | "invite" | "unchanged" | "error"; changes: string[] }[];
-  error?: string;
-}
-
 type Feedback = { tone: "success" | "error"; message: string; link?: string } | null;
-
-const deliveryLabels: Record<Invitation["emailDeliveryStatus"], string> = {
-  in_app_only: "Link only (no email set up)",
-  pending: "Sending",
-  sent: "Email sent",
-  failed: "Email failed",
-};
 
 function MemberSelect({ id, value, onChange, members, placeholder, noneLabel, exclude }: {
   id: string;
@@ -111,6 +96,14 @@ export function PeopleSection({ role, currentUserId }: { role: Role; currentUser
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState(false);
+  const [tab, setTab] = useState("members");
+  const [editFirstName, setEditFirstName] = useState("");
+  const [editLastName, setEditLastName] = useState("");
+  const [editActive, setEditActive] = useState(true);
+  const [editTeams, setEditTeams] = useState<string[]>([]);
+  const [editConfirm, setEditConfirm] = useState(false);
 
   const [editing, setEditing] = useState<Member | null>(null);
   const [editRole, setEditRole] = useState<Role>("member");
@@ -133,10 +126,10 @@ export function PeopleSection({ role, currentUserId }: { role: Role; currentUser
   const [inviteManager, setInviteManager] = useState("");
   const [inviteJobTitle, setInviteJobTitle] = useState("");
 
-  const [csvText, setCsvText] = useState(CSV_TEMPLATE);
-  const [importResult, setImportResult] = useState<ImportResult | null>(null);
 
   const load = useCallback(async () => {
+    setLoading(true);
+    try {
     const requests = [fetch("/api/members", { cache: "no-store" }), fetch("/api/teams", { cache: "no-store" })];
     if (isAdmin) requests.push(fetch("/api/invitations", { cache: "no-store" }));
     const responses = await Promise.all(requests);
@@ -153,6 +146,9 @@ export function PeopleSection({ role, currentUserId }: { role: Role; currentUser
     setMembers(memberData.members ?? []);
     setTeams(teamData.teams ?? []);
     if (invitationData) setInvitations(invitationData.invitations ?? []);
+    } catch {
+      setFeedback({ tone: "error", message: "Could not load people data. Check your connection and try again." });
+    } finally { setLoading(false); }
   }, [isAdmin]);
 
   useEffect(() => {
@@ -177,24 +173,43 @@ export function PeopleSection({ role, currentUserId }: { role: Role; currentUser
         setFeedback({ tone: "error", message: data.error ?? "Request failed." });
         return null;
       }
-      setFeedback({ tone: "success", message: successMessage, link: data.inviteUrl });
+      const delivery = data.invitation?.emailDeliveryStatus;
+      setFeedback({ tone: "success", message: `${successMessage}${delivery ? ` ${deliveryLabels[delivery] ?? deliveryLabels.unknown}.` : ""}`, link: data.inviteUrl });
       await load();
       return data;
+    } catch {
+      setFeedback({ tone: "error", message: "Connection interrupted. The change could not be confirmed; reload before retrying." });
+      return null;
     } finally {
       setBusy(false);
     }
   }
 
   function openEdit(member: Member) {
+    setFeedback(null);
     setEditing(member);
+    setEditFirstName(splitName(member.name).firstName);
+    setEditLastName(splitName(member.name).lastName);
+    setEditActive(member.isActive);
+    setEditTeams(member.teams.map((team) => team.id));
+    setReassignTo("");
+    setDeactivateReason("");
     setEditRole(member.role);
     setEditManager(member.managerId ?? "");
     setEditJobTitle(member.jobTitle);
   }
 
-  async function saveEdit() {
+  async function saveEdit(confirmed = false) {
     if (!editing) return;
+    if (!editActive && editing.isActive && !confirmed) { setEditConfirm(true); return; }
     const body: Record<string, unknown> = {};
+    const name = [editFirstName.trim(), editLastName.trim()].filter(Boolean).join(" ");
+    if (editing.nameEditable && name !== editing.name) body.name = name;
+    if (editActive !== editing.isActive) {
+      body.isActive = editActive;
+      if (!editActive) { body.reassignToUserId = reassignTo || null; body.reason = deactivateReason.trim() || undefined; }
+    }
+    if ([...editTeams].sort().join(",") !== editing.teams.map((team) => team.id).sort().join(",")) body.teamIds = editTeams;
     if (editRole !== editing.role) body.role = editRole;
     if ((editManager || null) !== editing.managerId) body.managerId = editManager || null;
     if (editJobTitle.trim() !== editing.jobTitle) body.jobTitle = editJobTitle;
@@ -203,7 +218,7 @@ export function PeopleSection({ role, currentUserId }: { role: Role; currentUser
       return;
     }
     const saved = await send(`/api/members/${editing.id}`, "PATCH", body, `${editing.name} updated.`);
-    if (saved) setEditing(null);
+    if (saved) { setEditing(null); setEditConfirm(false); }
   }
 
   async function confirmDeactivate() {
@@ -250,61 +265,27 @@ export function PeopleSection({ role, currentUserId }: { role: Role; currentUser
     }
   }
 
-  async function runImport(dryRun: boolean) {
-    setBusy(true);
-    setFeedback(null);
-    try {
-      const response = await fetch("/api/imports/employees", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ csv: csvText, dryRun }),
-      });
-      const data = await response.json().catch(() => ({})) as ImportResult;
-      setImportResult(data);
-      if (!response.ok) {
-        setFeedback({ tone: "error", message: data.error ?? "Import failed." });
-        return;
-      }
-      setFeedback({
-        tone: data.errors.length ? "error" : "success",
-        message: dryRun
-          ? `Preview: ${data.updated} to update, ${data.invited} to invite, ${data.created} new teams, ${data.errors.length} rows with errors. Nothing has been saved yet.`
-          : `Import finished: ${data.updated} updated, ${data.invited} invited, ${data.created} teams created, ${data.errors.length} rows skipped.`,
-      });
-      if (!dryRun) await load();
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function readFile(file: File | undefined) {
-    if (!file) return;
-    setCsvText(await file.text());
-    setImportResult(null);
-  }
-
   const activeMembers = members.filter((member) => member.isActive);
-  const sortedMembers = [...members].sort((a, b) => Number(b.isActive) - Number(a.isActive) || a.name.localeCompare(b.name));
+  const lastAdmin = editing?.role === "admin" && editing.isActive && activeMembers.filter((member) => member.role === "admin").length <= 1;
+
+  if (adding && isAdmin) return <AddUsers onChanged={load} onFinish={() => { setAdding(false); setTab("members"); setFeedback(null); }} />;
 
   return (
-    <Card className="shadow-none">
-      <CardHeader>
-        <CardTitle>People</CardTitle>
-        <CardDescription>
-          {isAdmin
-            ? "Invite colleagues, set roles and reporting lines, organise teams and import staff from a spreadsheet."
-            : "See who is in the workspace and organise teams."}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <section className="space-y-6" aria-labelledby="user-management-title">
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <div><h1 id="user-management-title" className="text-3xl lg:text-4xl">User Management</h1><p className="mt-2 text-sm text-muted-foreground">Manage your workspace’s people and access.</p></div>
+        {isAdmin && <Button onClick={() => setAdding(true)}><Plus />Add users</Button>}
+      </header>
+      <div className="space-y-4">
         {feedback && (
           <Alert variant={feedback.tone === "error" ? "destructive" : "default"}>
             <AlertTitle>{feedback.tone === "error" ? "Needs attention" : "Done"}</AlertTitle>
             <AlertDescription>
               <p>{feedback.message}</p>
+              {feedback.tone === "error" && <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>Reload people</Button>}
               {feedback.link && (
                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <span className="text-xs">No email service is set up, so share this invite link directly:</span>
+                  <span className="text-xs">Share this invitation link directly if email was not delivered:</span>
                   <code className="max-w-full break-all rounded bg-muted px-2 py-1 text-xs">{feedback.link}</code>
                   <Button size="sm" variant="outline" onClick={() => void navigator.clipboard?.writeText(feedback.link ?? "")}>Copy link</Button>
                 </div>
@@ -313,69 +294,37 @@ export function PeopleSection({ role, currentUserId }: { role: Role; currentUser
           </Alert>
         )}
 
-        <Tabs defaultValue="members">
-          <TabsList className="flex h-auto flex-wrap">
-            <TabsTrigger value="members">Members ({activeMembers.length})</TabsTrigger>
-            <TabsTrigger value="teams">Teams ({teams.length})</TabsTrigger>
-            {isAdmin && <TabsTrigger value="invitations">Invitations</TabsTrigger>}
-            {isAdmin && <TabsTrigger value="import">Import CSV</TabsTrigger>}
-          </TabsList>
-
-          <TabsContent value="members" className="pt-2">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Person</TableHead>
-                    <TableHead>Job title</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Manager</TableHead>
-                    <TableHead>Teams</TableHead>
-                    <TableHead>Status</TableHead>
-                    {isAdmin && <TableHead className="text-right">Actions</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sortedMembers.map((member) => (
-                    <TableRow key={member.id} className={member.isActive ? undefined : "text-muted-foreground"}>
-                      <TableCell>
-                        <p className="font-medium">{member.name}{member.userId === currentUserId ? " (you)" : ""}</p>
-                        <p className="text-xs text-muted-foreground">{member.email}</p>
-                      </TableCell>
-                      <TableCell>{member.jobTitle || "—"}</TableCell>
-                      <TableCell><Badge variant="secondary">{member.role}</Badge></TableCell>
-                      <TableCell>{member.managerName ?? "—"}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {member.teams.map((team) => (
-                            <Badge key={team.id} variant="outline">{team.name}{team.isLead ? " · lead" : ""}</Badge>
-                          ))}
-                          {!member.teams.length && "—"}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={member.isActive ? "default" : "outline"}>{member.isActive ? "Active" : "Deactivated"}</Badge>
-                      </TableCell>
-                      {isAdmin && (
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            {member.isActive && <Button size="sm" variant="outline" onClick={() => openEdit(member)} disabled={busy}>Edit</Button>}
-                            {member.isActive ? (
-                              <Button size="sm" variant="ghost" onClick={() => setDeactivating(member)} disabled={busy || member.userId === currentUserId}>Deactivate</Button>
-                            ) : (
-                              <Button size="sm" variant="outline" onClick={() => send(`/api/members/${member.id}`, "PATCH", { isActive: true }, `${member.name} reactivated.`)} disabled={busy}>Reactivate</Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
-                  {!members.length && (
-                    <TableRow><TableCell colSpan={isAdmin ? 7 : 6} className="text-muted-foreground">No members loaded yet.</TableCell></TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+        <Tabs value={tab} onValueChange={setTab}>
+          <div className="overflow-x-auto border-b">
+            <TabsList variant="line" className="h-12 gap-3 sm:gap-7">
+              <TabsTrigger value="members" className="px-4">Users</TabsTrigger>
+              <TabsTrigger value="permissions" className="px-4">Permissions</TabsTrigger>
+              <TabsTrigger value="roles" className="px-4">Roles</TabsTrigger>
+              <TabsTrigger value="teams" className="px-4">Teams</TabsTrigger>
+              {isAdmin && <TabsTrigger value="invitations" className="px-4">Invitations</TabsTrigger>}
+            </TabsList>
+          </div>
+          <TabsContent value="members" className="min-w-0 pt-4">
+            <UserTable members={members} teams={teams} currentUserId={currentUserId} isAdmin={isAdmin} busy={busy} loading={loading} onEdit={openEdit} onDeactivate={(member) => { setFeedback(null); setReassignTo(""); setDeactivateReason(""); setDeactivating(member); }} />
+          </TabsContent>
+          <TabsContent value="permissions" className="space-y-5 bg-card p-6 sm:p-8">
+            <h2>Workspace permissions</h2>
+            <p className="text-sm text-muted-foreground">These are the application’s enforced rules, not editable security settings. Your role is {role}.</p>
+            <Table><TableHeader><TableRow><TableHead>Capability</TableHead><TableHead>Admin</TableHead><TableHead>Manager</TableHead><TableHead>Member</TableHead></TableRow></TableHeader><TableBody>
+              <TableRow><TableCell>View people and manage teams</TableCell><TableCell>Yes</TableCell><TableCell>Yes</TableCell><TableCell>No</TableCell></TableRow>
+              <TableRow><TableCell>Invite users and import CSV</TableCell><TableCell>Yes</TableCell><TableCell>No</TableCell><TableCell>No</TableCell></TableRow>
+              <TableRow><TableCell>Edit users, roles and access status</TableCell><TableCell>Yes</TableCell><TableCell>No</TableCell><TableCell>No</TableCell></TableRow>
+              <TableRow><TableCell>Create objectives and manage cycles</TableCell><TableCell>Yes</TableCell><TableCell>Yes</TableCell><TableCell>No</TableCell></TableRow>
+            </TableBody></Table>
+            <p className="text-sm text-muted-foreground">Deactivated users cannot access the workspace. Admins cannot deactivate themselves or remove the last active admin. History is preserved.</p>
+          </TabsContent>
+          <TabsContent value="roles" className="space-y-5 bg-card p-6 sm:p-8">
+            <h2>Built-in roles</h2><p className="text-sm text-muted-foreground">Roles are fixed by the application. There is no custom role editor.</p>
+            <dl className="grid gap-6 md:grid-cols-3">
+              <div><dt className="font-semibold">Admin</dt><dd className="mt-2 text-sm text-muted-foreground">Manages invitations, CSV imports, users and access, as well as teams, objectives and cycles.</dd></div>
+              <div><dt className="font-semibold">Manager</dt><dd className="mt-2 text-sm text-muted-foreground">Views the directory and manages teams, objectives and cycles. Cannot change user access or send invitations.</dd></div>
+              <div><dt className="font-semibold">Member</dt><dd className="mt-2 text-sm text-muted-foreground">Participates in the OKR workspace. Does not have access to User Management or team administration.</dd></div>
+            </dl>
           </TabsContent>
 
           <TabsContent value="teams" className="space-y-4 pt-2">
@@ -500,7 +449,7 @@ export function PeopleSection({ role, currentUserId }: { role: Role; currentUser
                   <Input id="invite-job-title" value={inviteJobTitle} onChange={(event) => setInviteJobTitle(event.target.value)} disabled={busy} />
                 </Field>
                 <div className="md:col-span-3">
-                  <Button type="submit" disabled={busy || !inviteEmail.trim()}>Send invitation</Button>
+                  <Button type="submit" disabled={busy || !inviteEmail.trim()}>Create invitation</Button>
                 </div>
               </form>
 
@@ -559,121 +508,37 @@ export function PeopleSection({ role, currentUserId }: { role: Role; currentUser
             </TabsContent>
           )}
 
-          {isAdmin && (
-            <TabsContent value="import" className="space-y-4 pt-2">
-              <Field>
-                <FieldLabel htmlFor="csv-file">Upload a CSV file</FieldLabel>
-                <Input id="csv-file" type="file" accept=".csv,text/csv" onChange={(event) => void readFile(event.target.files?.[0])} disabled={busy} />
-                <FieldDescription>
-                  Columns: email, name, role (admin/manager/member), manager_email, team_name, job_title, status (active/inactive).
-                  Existing people are updated; new emails get an invitation. Blank cells leave existing values unchanged.
-                </FieldDescription>
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="csv-text">Or paste CSV</FieldLabel>
-                <Textarea id="csv-text" rows={8} className="font-mono text-xs" value={csvText} onChange={(event) => { setCsvText(event.target.value); setImportResult(null); }} disabled={busy} />
-              </Field>
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" onClick={() => runImport(true)} disabled={busy || !csvText.trim()}>Preview changes</Button>
-                <Button onClick={() => runImport(false)} disabled={busy || !importResult?.dryRun || !importResult.rows?.some((row) => row.action === "update" || row.action === "invite")}>
-                  Import
-                </Button>
-              </div>
-              {!importResult?.dryRun && <p className="text-xs text-muted-foreground">Preview the file first; rows with errors are skipped on import.</p>}
-
-              {importResult && (
-                <div className="space-y-3">
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="secondary">{importResult.dryRun ? "Preview" : "Imported"}</Badge>
-                    <Badge variant="outline">Updated: {importResult.updated}</Badge>
-                    <Badge variant="outline">Invited: {importResult.invited}</Badge>
-                    <Badge variant="outline">Teams created: {importResult.created}</Badge>
-                    <Badge variant={importResult.errors.length ? "destructive" : "outline"}>Errors: {importResult.errors.length}</Badge>
-                  </div>
-                  {importResult.errors.length > 0 && (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Row</TableHead>
-                          <TableHead>Column</TableHead>
-                          <TableHead>Problem</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {importResult.errors.map((error, index) => (
-                          <TableRow key={`${error.row}-${error.field}-${index}`}>
-                            <TableCell className="tabular-nums">{error.row}</TableCell>
-                            <TableCell><code className="text-xs">{error.field}</code></TableCell>
-                            <TableCell>{error.message}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
-                  {importResult.rows && importResult.rows.some((row) => row.action !== "error") && (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Row</TableHead>
-                          <TableHead>Email</TableHead>
-                          <TableHead>Action</TableHead>
-                          <TableHead>Changes</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {importResult.rows.filter((row) => row.action !== "error").map((row) => (
-                          <TableRow key={row.row}>
-                            <TableCell className="tabular-nums">{row.row}</TableCell>
-                            <TableCell>{row.email}</TableCell>
-                            <TableCell><Badge variant="secondary">{row.action}</Badge></TableCell>
-                            <TableCell className="text-sm">{row.changes.join(", ") || "No changes"}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
-                </div>
-              )}
-            </TabsContent>
-          )}
         </Tabs>
-      </CardContent>
+      </div>
 
-      <Dialog open={Boolean(editing)} onOpenChange={(open) => { if (!open) setEditing(null); }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit {editing?.name}</DialogTitle>
-            <DialogDescription>Change role, reporting line or job title.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Field>
-              <FieldLabel htmlFor="edit-role">Role</FieldLabel>
-              <Select value={editRole} onValueChange={(value) => setEditRole(value as Role)}>
-                <SelectTrigger id="edit-role" className="w-full"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="member">Member</SelectItem>
-                  <SelectItem value="manager">Manager</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="edit-manager">Manager</FieldLabel>
-              <MemberSelect id="edit-manager" value={editManager} onChange={setEditManager} members={members} placeholder="No manager" noneLabel="No manager" exclude={editing?.userId} />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="edit-job-title">Job title</FieldLabel>
-              <Input id="edit-job-title" maxLength={160} value={editJobTitle} onChange={(event) => setEditJobTitle(event.target.value)} />
-            </Field>
+      <Dialog open={Boolean(editing)} onOpenChange={(open) => { if (!open && !busy) setEditing(null); }}>
+        <DialogContent className="flex max-h-[90dvh] flex-col overflow-hidden p-0 sm:max-w-xl">
+          <DialogHeader className="shrink-0 border-b p-6"><DialogTitle>Edit User</DialogTitle><DialogDescription>Update profile and workspace access. Email is read-only.</DialogDescription></DialogHeader>
+          <div className="min-h-0 space-y-5 overflow-y-auto px-6 py-2">
+            {feedback?.tone === "error" && <Alert variant="destructive"><AlertDescription>{feedback.message}</AlertDescription></Alert>}
+            <Field><FieldLabel htmlFor="edit-email">Email</FieldLabel><Input id="edit-email" value={editing?.email ?? ""} readOnly /></Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field><FieldLabel htmlFor="edit-first-name">First name</FieldLabel><Input id="edit-first-name" maxLength={160} value={editFirstName} onChange={(event) => setEditFirstName(event.target.value)} readOnly={!editing?.nameEditable} disabled={busy} /></Field>
+              <Field><FieldLabel htmlFor="edit-last-name">Last name</FieldLabel><Input id="edit-last-name" maxLength={160} value={editLastName} onChange={(event) => setEditLastName(event.target.value)} readOnly={!editing?.nameEditable} disabled={busy} /></Field>
+            </div>
+            <p className="text-xs text-muted-foreground">{editing?.nameEditable ? "First and last names are saved together as the account display name (160 characters maximum). Existing names split at the first space." : "This account is shared across workspaces. Its name is read-only here to avoid changing another workspace’s account details."}</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field><FieldLabel htmlFor="edit-status">Status</FieldLabel><Select value={editActive ? "active" : "inactive"} disabled={busy || editing?.userId === currentUserId || Boolean(lastAdmin)} onValueChange={(value) => setEditActive(value === "active")}><SelectTrigger id="edit-status" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Active</SelectItem><SelectItem value="inactive">Inactive</SelectItem></SelectContent></Select></Field>
+              <Field><FieldLabel htmlFor="edit-role">Role</FieldLabel><Select value={editRole} disabled={busy || Boolean(lastAdmin)} onValueChange={(value) => setEditRole(value as Role)}><SelectTrigger id="edit-role" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="member">Member</SelectItem><SelectItem value="manager">Manager</SelectItem><SelectItem value="admin">Admin</SelectItem></SelectContent></Select></Field>
+            </div>
+            <p className="text-xs text-muted-foreground">Inactive means no workspace access, not an employment lifecycle. You cannot deactivate yourself or remove the last active admin.</p>
+            <Field><FieldLabel htmlFor="edit-manager">Manager</FieldLabel><MemberSelect id="edit-manager" value={editManager} onChange={setEditManager} members={members} placeholder="No manager" noneLabel="No manager" exclude={editing?.userId} /></Field>
+            <Field><FieldLabel htmlFor="edit-job-title">Job title</FieldLabel><Input id="edit-job-title" maxLength={160} value={editJobTitle} disabled={busy} onChange={(event) => setEditJobTitle(event.target.value)} /></Field>
+            <fieldset className="space-y-3"><legend className="mb-3 text-sm font-medium">Teams</legend>{teams.map((team) => <label key={team.id} className="flex items-center gap-3 text-sm"><Checkbox checked={editTeams.includes(team.id)} disabled={busy} onCheckedChange={(checked) => setEditTeams((current) => checked === true ? [...current, team.id] : current.filter((id) => id !== team.id))} />{team.name}</label>)}{!teams.length && <p className="text-sm text-muted-foreground">No teams available.</p>}<p className="text-xs text-muted-foreground">Removing a user from a team also clears their team lead assignment there. Inactive users cannot be added to teams.</p></fieldset>
+            {!editActive && editing?.isActive && <div className="space-y-4 rounded-md border p-4"><p className="text-sm">Deactivation preserves history. You will confirm before saving.</p><Field><FieldLabel htmlFor="edit-reassign">Reassign objectives and key results</FieldLabel><MemberSelect id="edit-reassign" value={reassignTo} onChange={setReassignTo} members={members} placeholder="Keep current ownership" noneLabel="Keep current ownership" exclude={editing.userId} /></Field><Field><FieldLabel htmlFor="edit-reason">Reason (optional)</FieldLabel><Input id="edit-reason" maxLength={500} value={deactivateReason} onChange={(event) => setDeactivateReason(event.target.value)} /></Field>{editing.directReportCount > 0 && <p className="text-sm text-muted-foreground">Update the manager for their {editing.directReportCount} direct reports separately.</p>}</div>}
+            <div className="rounded-md bg-muted/50 p-4 text-sm text-muted-foreground"><p className="font-medium text-foreground">Not available in this workspace</p><p className="mt-1">Mobile number, locale, hire and termination dates, location, department and Insights are not supported. They are not collected or saved here.</p></div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditing(null)} disabled={busy}>Cancel</Button>
-            <Button onClick={saveEdit} disabled={busy}>Save changes</Button>
-          </DialogFooter>
+          <DialogFooter className="shrink-0 border-t bg-card p-6"><Button variant="outline" onClick={() => setEditing(null)} disabled={busy}>Cancel</Button><Button onClick={() => void saveEdit()} disabled={busy || (Boolean(editing?.nameEditable) && (!editFirstName.trim() || `${editFirstName.trim()} ${editLastName.trim()}`.trim().length > 160))}>{busy ? "Saving…" : "Save changes"}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
+      <AlertDialog open={editConfirm} onOpenChange={(open) => { if (!busy) setEditConfirm(open); }}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Deactivate {editing?.name} and save changes?</AlertDialogTitle><AlertDialogDescription>This removes workspace access and preserves history. {reassignTo ? "Their objectives and key results will be reassigned." : "Their current goal ownership will be kept."}</AlertDialogDescription></AlertDialogHeader>{feedback?.tone === "error" && <p role="alert" className="text-sm text-destructive">{feedback.message}</p>}<AlertDialogFooter><AlertDialogCancel disabled={busy}>Go back</AlertDialogCancel><Button variant="destructive" disabled={busy} onClick={() => void saveEdit(true)}>Deactivate and save</Button></AlertDialogFooter></AlertDialogContent></AlertDialog>
 
-      <Dialog open={Boolean(deactivating)} onOpenChange={(open) => { if (!open) setDeactivating(null); }}>
+      <Dialog open={Boolean(deactivating)} onOpenChange={(open) => { if (!open && !busy) setDeactivating(null); }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Deactivate {deactivating?.name}?</DialogTitle>
@@ -682,6 +547,7 @@ export function PeopleSection({ role, currentUserId }: { role: Role; currentUser
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {feedback?.tone === "error" && <Alert variant="destructive"><AlertDescription>{feedback.message}</AlertDescription></Alert>}
             <Field>
               <FieldLabel htmlFor="reassign-to">Hand over their objectives and key results to</FieldLabel>
               <MemberSelect id="reassign-to" value={reassignTo} onChange={setReassignTo} members={members} placeholder="Keep current ownership" noneLabel="Keep current ownership" exclude={deactivating?.userId} />
@@ -723,6 +589,6 @@ export function PeopleSection({ role, currentUserId }: { role: Role; currentUser
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Card>
+    </section>
   );
 }

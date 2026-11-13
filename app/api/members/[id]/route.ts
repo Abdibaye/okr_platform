@@ -1,10 +1,10 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { contextOr401, errorResponse, isResponse, isUuid, readJson } from "@/server/api-utils";
 import { getDb } from "@/server/db";
 import { countActiveAdmins, createsReportingLoop, isRole, loadManagerMap, recordAudit } from "@/server/people";
 import { hasRole } from "@/server/request-context";
-import { companyMemberships, keyResults, objectives } from "@/server/schema";
+import { companyMemberships, keyResults, objectives, teamMemberships, teams, user } from "@/server/schema";
 
 class MemberUpdateError extends Error {
   constructor(message: string, public readonly status: number) {
@@ -22,6 +22,13 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/members/[i
   const body = await readJson(request);
   if (!body) return errorResponse("Provide the member changes to save.", 400);
   const actorId = context.session.user.id;
+
+  if (body.name !== undefined && (typeof body.name !== "string" || !body.name.trim() || body.name.trim().length > 160)) {
+    return errorResponse("Name is required and must be 160 characters or fewer.", 400);
+  }
+  if (body.teamIds !== undefined && (!Array.isArray(body.teamIds) || body.teamIds.some((id) => typeof id !== "string" || !isUuid(id)))) {
+    return errorResponse("Choose valid workspace teams.", 400);
+  }
 
   if (body.role !== undefined && !isRole(body.role)) return errorResponse("Role must be admin, manager or member.", 400);
   if (body.managerId !== undefined && body.managerId !== null && typeof body.managerId !== "string") {
@@ -53,6 +60,42 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/members/[i
       const updates: Partial<typeof companyMemberships.$inferInsert> = {};
       const changes: Record<string, unknown> = {};
       let action = "member_updated";
+
+      if (typeof body.name === "string") {
+        const [account] = await transaction.select({ name: user.name }).from(user).where(eq(user.id, target.userId)).for("update");
+        if (!account) throw new MemberUpdateError("Account not found.", 404);
+        if (account.name !== body.name.trim()) {
+          const [shared] = await transaction.select({ id: companyMemberships.id }).from(companyMemberships).where(and(
+            eq(companyMemberships.userId, target.userId), ne(companyMemberships.companyId, context.companyId),
+          )).limit(1);
+          if (shared) throw new MemberUpdateError("This account belongs to multiple workspaces. Its owner must change their shared account name.", 409);
+          await transaction.update(user).set({ name: body.name.trim(), updatedAt: new Date() }).where(eq(user.id, target.userId));
+          changes.name = { from: account.name, to: body.name.trim() };
+        }
+      }
+
+      if (Array.isArray(body.teamIds)) {
+        const requested = new Set(body.teamIds as string[]);
+        const availableTeams = await transaction.select({ id: teams.id, leadUserId: teams.leadUserId }).from(teams).where(and(
+          eq(teams.companyId, context.companyId), isNull(teams.archivedAt),
+        )).for("update");
+        if ([...requested].some((teamId) => !availableTeams.some((team) => team.id === teamId))) {
+          throw new MemberUpdateError("Choose non-archived teams in this workspace.", 400);
+        }
+        const existing = await transaction.select({ teamId: teamMemberships.teamId }).from(teamMemberships).where(and(
+          eq(teamMemberships.companyId, context.companyId), eq(teamMemberships.userId, target.userId),
+        ));
+        const existingIds = new Set(existing.map((entry) => entry.teamId));
+        const added = [...requested].filter((teamId) => !existingIds.has(teamId));
+        const removed = availableTeams.filter((team) => existingIds.has(team.id) && !requested.has(team.id)).map((team) => team.id);
+        if (added.length && !(body.isActive ?? target.isActive)) throw new MemberUpdateError("Reactivate this user before adding them to a team.", 400);
+        if (removed.length) {
+          await transaction.delete(teamMemberships).where(and(eq(teamMemberships.companyId, context.companyId), eq(teamMemberships.userId, target.userId), inArray(teamMemberships.teamId, removed)));
+          await transaction.update(teams).set({ leadUserId: null, updatedAt: new Date() }).where(and(eq(teams.companyId, context.companyId), eq(teams.leadUserId, target.userId), inArray(teams.id, removed)));
+        }
+        if (added.length) await transaction.insert(teamMemberships).values(added.map((teamId) => ({ companyId: context.companyId, userId: target.userId, teamId }))).onConflictDoNothing();
+        if (added.length || removed.length) changes.teams = { added, removed };
+      }
 
       if (body.role !== undefined && body.role !== target.role) {
         if (target.role === "admin" && target.isActive && await countActiveAdmins(transaction, context.companyId) <= 1) {
@@ -112,7 +155,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/members/[i
         action = "member_reactivated";
       }
 
-      if (!Object.keys(updates).length) throw new MemberUpdateError("Nothing to change.", 400);
+      if (!Object.keys(updates).length && !Object.keys(changes).length) throw new MemberUpdateError("Nothing to change.", 400);
       updates.updatedAt = new Date();
 
       const [updated] = await transaction.update(companyMemberships).set(updates)
@@ -129,7 +172,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/members/[i
         details: { userId: target.userId, ...changes },
       });
       return { member: updated, reassigned };
-    });
+    }, { isolationLevel: "serializable" });
     return NextResponse.json(result);
   } catch (error) {
     if (error instanceof MemberUpdateError) return errorResponse(error.message, error.status);

@@ -330,9 +330,15 @@ export async function POST(request: Request) {
     return inserted;
   });
 
+  const deliveries = [];
   for (const invitation of createdInvitations) {
-    await deliverInvitation(request, invitation, context.companyName, context.session.user.name);
+    try {
+      const delivery = await deliverInvitation(request, invitation, context.companyName, context.session.user.name);
+      deliveries.push({ email: invitation.email, status: delivery.status, error: delivery.error });
+    } catch {
+      deliveries.push({ email: invitation.email, status: "unknown", error: "Invitation saved; delivery could not be confirmed. Check Invitations before retrying." });
+    }
   }
 
-  return NextResponse.json({ ...summary, dryRun: false, rows: preview.sort((a, b) => a.row - b.row) });
+  return NextResponse.json({ ...summary, deliveries, dryRun: false, rows: preview.sort((a, b) => a.row - b.row) });
 }

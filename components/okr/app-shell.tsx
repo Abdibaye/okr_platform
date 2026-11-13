@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ThemeToggle } from "@/components/okr/theme-toggle";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import type { Workspace } from "@/app/types";
 
@@ -154,11 +155,13 @@ export function AppShell({
   workspace,
   unreadCount,
   onSignOut,
+  peopleView = false,
   children,
 }: {
   workspace: Workspace;
   unreadCount: number;
   onSignOut: () => void;
+  peopleView?: boolean;
   children: React.ReactNode;
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -172,6 +175,10 @@ export function AppShell({
   }, []);
 
   useEffect(() => {
+    if (peopleView) { setActive("people"); window.scrollTo(0, 0); return; }
+    const target = document.getElementById(window.location.hash.slice(1));
+    target?.scrollIntoView();
+    setActive(window.location.hash.slice(1) || "overview");
     const sections = navItems
       .map((item) => document.getElementById(item.id))
       .filter((section): section is HTMLElement => Boolean(section));
@@ -182,7 +189,7 @@ export function AppShell({
     }, { rootMargin: "-20% 0px -60% 0px" });
     sections.forEach((section) => observer.observe(section));
     return () => observer.disconnect();
-  }, [canManage]);
+  }, [canManage, peopleView]);
 
   useEffect(() => {
     if (!drawerOpen) return;
@@ -220,6 +227,7 @@ export function AppShell({
             )}
           </div>
           <button
+            id="mobile-navigation-toggle"
             type="button"
             onClick={toggleExpanded}
             aria-label={expanded ? "Collapse sidebar" : "Expand sidebar"}
@@ -252,10 +260,9 @@ export function AppShell({
           <main className="mx-auto max-w-[90rem] space-y-8 px-4 py-6 sm:px-6 lg:px-10 lg:py-8">{children}</main>
         </div>
 
-        {drawerOpen && (
-          <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label="Navigation menu">
-            <button type="button" className="absolute inset-0 bg-primary/70" onClick={() => setDrawerOpen(false)} aria-label="Close navigation menu" />
-            <div className="absolute inset-y-0 left-0 flex w-[86%] max-w-xs flex-col gap-4 bg-sidebar p-4 text-sidebar-foreground">
+        <Dialog open={drawerOpen} onOpenChange={setDrawerOpen}>
+            <DialogContent showCloseButton={false} aria-describedby={undefined} onCloseAutoFocus={(event) => { event.preventDefault(); document.getElementById("mobile-navigation-toggle")?.focus(); }} className="inset-y-0 left-0 flex h-dvh w-[86%] max-w-xs translate-x-0 translate-y-0 flex-col gap-4 rounded-none border-0 bg-sidebar p-4 text-sidebar-foreground sm:max-w-xs">
+              <DialogTitle className="sr-only">Navigation menu</DialogTitle>
               <div className="flex items-center justify-between">
                 <div className="flex min-w-0 items-center gap-3">
                   <Logo />
@@ -276,9 +283,8 @@ export function AppShell({
                 <NavList items={items} active={active} expanded onNavigate={() => setDrawerOpen(false)} />
               </nav>
               <SidebarFooter workspace={workspace} unreadCount={unreadCount} expanded onSignOut={onSignOut} onNavigate={() => setDrawerOpen(false)} />
-            </div>
-          </div>
-        )}
+            </DialogContent>
+        </Dialog>
       </div>
     </TooltipProvider>
   );

@@ -51,6 +51,13 @@ function progressTone(progress: number): ProgressTone {
 }
 
 export function OkrDashboard() {
+  const [peopleView, setPeopleView] = useState(false);
+  useEffect(() => {
+    const syncView = () => setPeopleView(window.location.hash === "#people");
+    syncView();
+    window.addEventListener("hashchange", syncView);
+    return () => window.removeEventListener("hashchange", syncView);
+  }, []);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
@@ -340,7 +347,10 @@ export function OkrDashboard() {
   const selectedCheckInDraft = selectedCheckInKr ? checkInDrafts[selectedCheckInKr.id] : undefined;
 
   return (
-    <AppShell workspace={workspace} unreadCount={workspace.audit.length} onSignOut={logout}>
+    <AppShell workspace={workspace} unreadCount={workspace.audit.length} onSignOut={logout} peopleView={peopleView && canManage}>
+      {peopleView && canManage ? (
+        <section id="people"><PeopleSection role={workspace.company.role} currentUserId={workspace.user.id} /></section>
+      ) : <>
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <h1 className="text-3xl lg:text-4xl">Dashboard</h1>
@@ -713,12 +723,6 @@ export function OkrDashboard() {
         </Card>
       </section>
 
-      {canManage && (
-        <section id="people" className="scroll-mt-20 md:scroll-mt-6">
-          <PeopleSection role={workspace.company.role} currentUserId={workspace.user.id} />
-        </section>
-      )}
-
       {selectedCheckInKr && selectedCheckInDraft && (
         <CheckInModal
           keyResult={selectedCheckInKr}
@@ -729,6 +733,7 @@ export function OkrDashboard() {
           onSubmit={() => updateKeyResult(selectedCheckInKr)}
         />
       )}
+      </>}
     </AppShell>
   );
 }
