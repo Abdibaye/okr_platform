@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Download, Plus, Search } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { AppShell } from "@/components/okr/app-shell";
 import { CheckInModal, type CheckInDraft } from "@/components/okr/check-in-modal";
+import { DashboardOverview } from "@/components/okr/dashboard-overview";
 import { PeopleSection } from "@/components/okr/people-section";
 import { PeriodComparisonSection } from "@/components/okr/period-comparison";
 import { Progress, type ProgressTone } from "@/components/okr/progress";
@@ -24,6 +26,22 @@ const today = new Date().toISOString().slice(0, 10);
 
 function metricValue(value: string) {
   return Number(value).toLocaleString();
+}
+
+function formatDate(value: string) {
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
+function csvCell(value: string | number) {
+  const text = String(value);
+  return /[",\n\r]/.test(text) ? `"${text.replaceAll("\"", "\"\"")}"` : text;
+}
+
+function focusField(id: string) {
+  const field = document.getElementById(id);
+  field?.scrollIntoView({ behavior: "smooth", block: "center" });
+  field?.focus({ preventScroll: true });
 }
 
 function progressTone(progress: number): ProgressTone {
@@ -57,6 +75,7 @@ export function OkrDashboard() {
   const [search, setSearch] = useState("");
   const [checkInKrId, setCheckInKrId] = useState<string | null>(null);
   const [checkInDrafts, setCheckInDrafts] = useState<Record<string, CheckInDraft>>({});
+  const [teamCount, setTeamCount] = useState<number | null>(null);
 
   const loadWorkspace = useCallback(async () => {
     const response = await fetch("/api/workspace", { cache: "no-store" });
@@ -86,6 +105,21 @@ export function OkrDashboard() {
   useEffect(() => {
     void loadWorkspace();
   }, [loadWorkspace]);
+
+  const workspaceRole = workspace?.company.role;
+  useEffect(() => {
+    if (workspaceRole !== "admin" && workspaceRole !== "manager") return;
+    let cancelled = false;
+    fetch("/api/teams", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (!cancelled && Array.isArray(data?.teams)) setTeamCount(data.teams.length);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceRole]);
 
   const cycles = workspace?.cycles ?? [];
   const selectedCycle = cycles.find((cycle) => cycle.id === selectedCycleId);
