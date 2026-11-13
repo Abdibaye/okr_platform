@@ -12,7 +12,7 @@ export default async function Page({
   const hasSessionCookie = cookieStore.getAll().some((cookie) => cookie.name.includes("better-auth.session_token"));
   if (hasSessionCookie) {
     const context = await getRequestContext().catch(() => null);
-    if (context) redirect("/dashboard");
+    if (context) redirect(context.isActive ? "/dashboard" : "/deactivated");
   }
 
   const { reset, session } = await searchParams;

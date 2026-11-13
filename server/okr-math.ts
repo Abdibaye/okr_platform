@@ -31,7 +31,7 @@ export interface CycleMetricInput {
   status: "draft" | "open" | "closed";
   finalReflection: string;
   objectives: Array<{
-    progress: string | number;
+    progress: string | number | null;
     keyResults: Array<{ id: string }>;
   }>;
 }

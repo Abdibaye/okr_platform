@@ -59,7 +59,7 @@ export async function GET() {
   const { summaries, comparisons } = buildPeriodComparisons(hydratedCycles);
 
   return NextResponse.json({
-    user: { name: context.session.user.name, email: context.session.user.email },
+    user: { id: context.session.user.id, name: context.session.user.name, email: context.session.user.email },
     company: { id: context.companyId, name: context.companyName, role: context.role },
     cycles: hydratedCycles,
     summaries,

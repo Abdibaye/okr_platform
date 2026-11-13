@@ -12,6 +12,7 @@ export default async function DashboardPage() {
 
   const context = await getRequestContext().catch(() => null);
   if (!context) redirect("/?session=expired");
+  if (!context.isActive) redirect("/deactivated");
 
   return <main className="mx-auto max-w-6xl p-6"><OkrDashboard /></main>;
 }

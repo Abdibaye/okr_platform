@@ -3,6 +3,7 @@ export type Role = "admin" | "manager" | "member";
 export type CycleStatus = "draft" | "open" | "closed";
 
 export interface WorkspaceUser {
+  id: string;
   name: string;
   email: string;
 }
@@ -55,7 +56,7 @@ export interface Objective {
   id: string;
   title: string;
   description: string;
-  progress: string;
+  progress: string | null;
   version: number;
   keyResults: KeyResult[];
 }

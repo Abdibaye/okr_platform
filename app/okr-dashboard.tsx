@@ -63,6 +63,10 @@ export function OkrDashboard() {
       window.location.href = "/?session=expired";
       return;
     }
+    if (response.status === 403) {
+      window.location.href = "/deactivated";
+      return;
+    }
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
       setFeedback({ tone: "error", message: data.error ?? "Could not load the workspace." });
@@ -445,7 +449,7 @@ export function OkrDashboard() {
             </form>
             <div className="space-y-4">
               {visibleObjectives.map((objective) => {
-                const objectiveProgress = objective.keyResults.length ? Number(objective.progress) : null;
+                const objectiveProgress = objective.keyResults.length && objective.progress !== null ? Number(objective.progress) : null;
                 return (
                   <article key={objective.id} className="rounded-xl border bg-card p-4">
                     <header className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">

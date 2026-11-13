@@ -31,7 +31,7 @@ export function AuthScreen({ initialNotice = null }: { initialNotice?: string | 
       const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.message ?? data.error ?? "Could not sign you in.");
-      window.location.href = "/okr";
+      window.location.href = "/dashboard";
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not sign you in.");
     } finally {
