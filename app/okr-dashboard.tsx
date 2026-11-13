@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { AppShell } from "@/components/okr/app-shell";
 import { CheckInModal, type CheckInDraft } from "@/components/okr/check-in-modal";
+import { PeopleSection } from "@/components/okr/people-section";
 import { PeriodComparisonSection } from "@/components/okr/period-comparison";
 import { Progress, type ProgressTone } from "@/components/okr/progress";
 import type { KeyResult, Objective, Workspace } from "./types";
@@ -607,6 +608,12 @@ export function OkrDashboard() {
           </CardContent>
         </Card>
       </section>
+
+      {canManage && (
+        <section id="people">
+          <PeopleSection role={workspace.company.role} currentUserId={workspace.user.id} />
+        </section>
+      )}
 
       {selectedCheckInKr && selectedCheckInDraft && (
         <CheckInModal
