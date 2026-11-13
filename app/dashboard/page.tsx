@@ -29,7 +29,7 @@ export default function DashboardHomePage() {
     <div className="space-y-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-3xl lg:text-4xl">Dashboard</h1>
+          <h1 className="text-3xl lg:text-4xl">Home</h1>
           <p className="mt-1 truncate text-sm text-muted-foreground">{workspace.company.name} · OKR workspace</p>
         </div>
         <div className="flex flex-wrap gap-2">

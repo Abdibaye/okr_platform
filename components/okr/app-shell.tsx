@@ -9,7 +9,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   History,
-  LayoutDashboard,
+  Home,
   LogOut,
   Menu,
   Target,
@@ -34,7 +34,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { id: "dashboard", href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "home", href: "/dashboard", label: "Home", icon: Home },
   { id: "goals", href: "/dashboard/goals", label: "Goals", icon: Target },
   { id: "cycles", href: "/dashboard/cycles", label: "Cycles", icon: CalendarRange },
   { id: "insights", href: "/dashboard/insights", label: "Insights", icon: TrendingUp },
