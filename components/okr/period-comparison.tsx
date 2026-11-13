@@ -57,7 +57,7 @@ export function PeriodComparisonSection({
   return (
     <Card className="border-border shadow-none">
       <CardHeader>
-        <CardTitle>Period comparisons</CardTitle>
+        <CardTitle>Insights &amp; period comparisons</CardTitle>
         <CardDescription>Compare progress, completion, and final reflections across cycles.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">

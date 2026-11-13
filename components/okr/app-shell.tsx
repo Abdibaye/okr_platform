@@ -1,17 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Bell,
   CalendarRange,
   ChevronsLeft,
   ChevronsRight,
-  GitCompareArrows,
+  History,
   LayoutDashboard,
   LogOut,
   Menu,
-  ScrollText,
   Target,
+  TrendingUp,
   Users,
   X,
   type LucideIcon,
@@ -25,18 +27,19 @@ import type { Workspace } from "@/app/types";
 
 interface NavItem {
   id: string;
+  href: string;
   label: string;
   icon: LucideIcon;
   managersOnly?: boolean;
 }
 
 const navItems: NavItem[] = [
-  { id: "overview", label: "Dashboard", icon: LayoutDashboard },
-  { id: "my-goals", label: "Objectives & key results", icon: Target },
-  { id: "company-okrs", label: "Cycles", icon: CalendarRange },
-  { id: "alignment", label: "Period comparison", icon: GitCompareArrows },
-  { id: "reports", label: "Audit log", icon: ScrollText },
-  { id: "people", label: "People", icon: Users, managersOnly: true },
+  { id: "dashboard", href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "goals", href: "/dashboard/goals", label: "Goals", icon: Target },
+  { id: "cycles", href: "/dashboard/cycles", label: "Cycles", icon: CalendarRange },
+  { id: "insights", href: "/dashboard/insights", label: "Insights", icon: TrendingUp },
+  { id: "activity", href: "/dashboard/activity", label: "Activity", icon: History },
+  { id: "team", href: "/dashboard/team", label: "Team", icon: Users, managersOnly: true },
 ];
 
 const SIDEBAR_KEY = "okr-sidebar-expanded";
@@ -57,25 +60,27 @@ function SidebarTip({ show, label, children }: { show: boolean; label: string; c
   );
 }
 
-function NavList({ items, active, expanded, onNavigate }: {
+function NavList({ items, expanded, onNavigate }: {
   items: NavItem[];
-  active: string;
   expanded: boolean;
   onNavigate?: () => void;
 }) {
+  const pathname = usePathname();
   return (
     <ul className="grid gap-1">
       {items.map((item) => {
         const Icon = item.icon;
-        const isActive = active === item.id;
+        const isActive = item.href === "/dashboard"
+          ? pathname === "/dashboard"
+          : pathname.startsWith(item.href);
         return (
           <li key={item.id}>
             <SidebarTip show={!expanded} label={item.label}>
-              <a
-                href={`#${item.id}`}
+              <Link
+                href={item.href}
                 onClick={onNavigate}
                 aria-label={item.label}
-                aria-current={isActive ? "location" : undefined}
+                aria-current={isActive ? "page" : undefined}
                 className={cn(
                   itemClass,
                   !expanded && "justify-center px-0",
@@ -84,7 +89,7 @@ function NavList({ items, active, expanded, onNavigate }: {
               >
                 <Icon className="size-5 shrink-0" aria-hidden="true" />
                 {expanded && <span className="truncate">{item.label}</span>}
-              </a>
+              </Link>
             </SidebarTip>
           </li>
         );
@@ -104,7 +109,7 @@ function SidebarFooter({ workspace, unreadCount, expanded, onSignOut, onNavigate
   return (
     <div className="grid gap-1 border-t border-sidebar-border pt-3">
       <SidebarTip show={!expanded} label={`${unreadCount} recent audit updates`}>
-        <a href="#reports" onClick={onNavigate} aria-label={`${unreadCount} recent audit updates`} className={cn(itemClass, !expanded && "justify-center px-0")}>
+        <Link href="/dashboard/activity" onClick={onNavigate} aria-label={`${unreadCount} recent audit updates`} className={cn(itemClass, !expanded && "justify-center px-0")}>
           <span className="relative">
             <Bell className="size-5" aria-hidden="true" />
             {unreadCount > 0 && (
@@ -114,7 +119,7 @@ function SidebarFooter({ workspace, unreadCount, expanded, onSignOut, onNavigate
             )}
           </span>
           {expanded && <span>Recent updates</span>}
-        </a>
+        </Link>
       </SidebarTip>
       <div className={cn("flex items-center", expanded ? "gap-3 px-1.5" : "justify-center")}>
         <ThemeToggle />
@@ -155,7 +160,6 @@ export function AppShell({
   workspace,
   unreadCount,
   onSignOut,
-  peopleView = false,
   children,
 }: {
   workspace: Workspace;
@@ -166,30 +170,12 @@ export function AppShell({
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const [active, setActive] = useState("overview");
   const canManage = workspace.company.role !== "member";
   const items = navItems.filter((item) => canManage || !item.managersOnly);
 
   useEffect(() => {
     setExpanded(window.localStorage.getItem(SIDEBAR_KEY) === "1");
   }, []);
-
-  useEffect(() => {
-    if (peopleView) { setActive("people"); window.scrollTo(0, 0); return; }
-    const target = document.getElementById(window.location.hash.slice(1));
-    target?.scrollIntoView();
-    setActive(window.location.hash.slice(1) || "overview");
-    const sections = navItems
-      .map((item) => document.getElementById(item.id))
-      .filter((section): section is HTMLElement => Boolean(section));
-    const observer = new IntersectionObserver((entries) => {
-      const visible = entries.filter((entry) => entry.isIntersecting)
-        .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-      if (visible) setActive(visible.target.id);
-    }, { rootMargin: "-20% 0px -60% 0px" });
-    sections.forEach((section) => observer.observe(section));
-    return () => observer.disconnect();
-  }, [canManage, peopleView]);
 
   useEffect(() => {
     if (!drawerOpen) return;
@@ -236,7 +222,7 @@ export function AppShell({
             {expanded ? <ChevronsLeft className="size-4" /> : <ChevronsRight className="size-4" />}
           </button>
           <nav aria-label="Primary navigation" className="flex-1 overflow-y-auto">
-            <NavList items={items} active={active} expanded={expanded} />
+            <NavList items={items} expanded={expanded} />
           </nav>
           <SidebarFooter workspace={workspace} unreadCount={unreadCount} expanded={expanded} onSignOut={onSignOut} />
         </aside>
@@ -280,7 +266,7 @@ export function AppShell({
                 </Button>
               </div>
               <nav aria-label="Mobile navigation" className="flex-1 overflow-y-auto">
-                <NavList items={items} active={active} expanded onNavigate={() => setDrawerOpen(false)} />
+                <NavList items={items} expanded onNavigate={() => setDrawerOpen(false)} />
               </nav>
               <SidebarFooter workspace={workspace} unreadCount={unreadCount} expanded onSignOut={onSignOut} onNavigate={() => setDrawerOpen(false)} />
             </DialogContent>

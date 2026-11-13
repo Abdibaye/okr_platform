@@ -53,7 +53,7 @@ function progressTone(progress: number): ProgressTone {
 export function OkrDashboard() {
   const [peopleView, setPeopleView] = useState(false);
   useEffect(() => {
-    const syncView = () => setPeopleView(window.location.hash === "#people");
+    const syncView = () => setPeopleView(window.location.hash === "#team" || window.location.hash === "#people");
     syncView();
     window.addEventListener("hashchange", syncView);
     return () => window.removeEventListener("hashchange", syncView);
@@ -349,7 +349,7 @@ export function OkrDashboard() {
   return (
     <AppShell workspace={workspace} unreadCount={workspace.audit.length} onSignOut={logout} peopleView={peopleView && canManage}>
       {peopleView && canManage ? (
-        <section id="people"><PeopleSection role={workspace.company.role} currentUserId={workspace.user.id} /></section>
+        <section id="team"><PeopleSection role={workspace.company.role} currentUserId={workspace.user.id} /></section>
       ) : <>
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
@@ -432,8 +432,8 @@ export function OkrDashboard() {
 
       <section id="my-goals" className="scroll-mt-20 space-y-4 md:scroll-mt-6">
         <div className="space-y-1">
-          <h2 className="text-xl">Objectives &amp; key results</h2>
-          <p className="text-sm text-muted-foreground">Track objectives in the selected cycle and check in on their key results.</p>
+          <h2 className="text-xl">Goals</h2>
+          <p className="text-sm text-muted-foreground">Track objectives in the selected cycle, align key results, and check in on progress.</p>
         </div>
         <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)] xl:items-start">
         <Card className="shadow-none">
@@ -691,8 +691,8 @@ export function OkrDashboard() {
       <section id="reports" className="scroll-mt-20 md:scroll-mt-6">
         <Card className="shadow-none">
           <CardHeader>
-            <CardTitle>Workspace audit log</CardTitle>
-            <CardDescription>Cycle closes and admin reopens are recorded here.</CardDescription>
+            <CardTitle>Activity</CardTitle>
+            <CardDescription>Cycle closes, reopens, and workspace actions are recorded here.</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
