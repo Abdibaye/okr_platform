@@ -29,7 +29,12 @@ export function emailProvider(): "resend" | "webhook" | null {
 }
 
 function describeFailure(error: unknown) {
-  if (error instanceof Error) return (error.name === "TimeoutError" ? "Email provider timed out" : error.message).slice(0, 500);
+  if (error instanceof Error) {
+    if (error.name === "TimeoutError") return "Email provider timed out";
+    // fetch reports network problems as "fetch failed" with the real reason (e.g. ECONNREFUSED) in `cause`.
+    const cause = error.cause instanceof Error ? ((error.cause as NodeJS.ErrnoException).code ?? error.cause.message) : null;
+    return (cause ? `Could not reach the email provider (${cause})` : error.message).slice(0, 500);
+  }
   return "Email delivery failed";
 }
 
