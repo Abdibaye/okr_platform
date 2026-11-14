@@ -3,6 +3,8 @@ import { and, eq, sql } from "drizzle-orm";
 import { contextOr401, errorResponse, isResponse, isUuid, readJson } from "@/server/api-utils";
 import { hasRole } from "@/server/request-context";
 import { getDb } from "@/server/db";
+import { quarterlyPresetDates } from "@/server/okr-math";
+import { isIsoDate } from "@/server/objectives";
 import { okrCycles } from "@/server/schema";
 
 export async function POST(request: Request) {
@@ -11,14 +13,31 @@ export async function POST(request: Request) {
   if (!hasRole(context.role, ["admin", "manager"])) return errorResponse("Only managers and admins can create cycles.", 403);
 
   const body = await readJson(request);
-  const name = typeof body?.name === "string" ? body.name.trim() : "";
-  const startDate = typeof body?.startDate === "string" ? body.startDate : "";
-  const endDate = typeof body?.endDate === "string" ? body.endDate : "";
-  if (!name || name.length > 120 || !/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+  if (!body) return errorResponse("Provide cycle details.", 400);
+  let name = typeof body.name === "string" ? body.name.trim() : "";
+  let startDate = typeof body.startDate === "string" ? body.startDate : "";
+  let endDate = typeof body.endDate === "string" ? body.endDate : "";
+  if (body.preset !== undefined) {
+    const preset = body.preset as { year?: unknown; quarter?: unknown } | null;
+    try {
+      const dates = quarterlyPresetDates(Number(preset?.year), Number(preset?.quarter));
+      name ||= dates.name;
+      startDate = dates.startDate;
+      endDate = dates.endDate;
+    } catch (error) {
+      return errorResponse(error instanceof Error ? error.message : "Choose a valid year and quarter.", 400);
+    }
+  }
+  if (!name || name.length > 120 || !isIsoDate(startDate) || !isIsoDate(endDate)) {
     return errorResponse("Provide a cycle name and valid start and end dates.", 400);
   }
-  if (startDate > endDate || Number.isNaN(Date.parse(startDate)) || Number.isNaN(Date.parse(endDate))) {
-    return errorResponse("The cycle end date must be on or after its start date.", 400);
+  if (startDate > endDate) return errorResponse("The cycle end date must be on or after its start date.", 400);
+  if (body.requireApproval !== undefined && typeof body.requireApproval !== "boolean") {
+    return errorResponse("Approval requirement must be on or off.", 400);
+  }
+  const cadence = body.checkInCadence ?? "weekly";
+  if (cadence !== "weekly" && cadence !== "biweekly" && cadence !== "monthly") {
+    return errorResponse("Check-in cadence must be weekly, biweekly or monthly.", 400);
   }
 
   const [cycle] = await getDb().insert(okrCycles).values({
@@ -26,6 +45,8 @@ export async function POST(request: Request) {
     name,
     startDate,
     endDate,
+    requireApproval: body.requireApproval === true,
+    checkInCadence: cadence,
     createdBy: context.session.user.id,
   }).onConflictDoNothing().returning();
   if (!cycle) return errorResponse("A cycle with that name already exists.", 409);

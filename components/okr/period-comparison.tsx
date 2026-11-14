@@ -10,18 +10,25 @@ import { Progress } from "@/components/okr/progress";
 import { compareCycleSummaries } from "@/server/okr-math";
 import type { CycleSummary, PeriodComparison } from "@/app/types";
 
-function formatDelta(value: number, suffix = "") {
+function formatDelta(value: number | null, suffix = "") {
+  if (value === null) return "—";
   if (value > 0) return `+${value}${suffix}`;
   return `${value}${suffix}`;
 }
 
-function deltaVariant(value: number): "default" | "secondary" | "destructive" {
+function deltaVariant(value: number | null): "default" | "secondary" | "destructive" {
+  if (value === null) return "secondary";
   if (value > 0) return "default";
   if (value < 0) return "destructive";
   return "secondary";
 }
 
-function progressTone(progress: number) {
+function formatAverage(progress: number | null) {
+  return progress === null ? "No KRs" : `${progress.toFixed(1)}%`;
+}
+
+function progressTone(progress: number | null) {
+  if (progress === null) return "neutral" as const;
   if (progress >= 70) return "on_track" as const;
   if (progress >= 40) return "at_risk" as const;
   return "off_track" as const;
@@ -101,12 +108,12 @@ export function PeriodComparisonSection({
                 <div className="rounded-lg border border-border bg-card p-3">
                   <p className="text-xs text-muted-foreground">Average progress</p>
                   <div className="mt-1 flex items-center justify-between gap-2">
-                    <span className="text-lg font-semibold tabular-nums">{targetSummary.averageProgress.toFixed(1)}%</span>
+                    <span className="text-lg font-semibold tabular-nums">{formatAverage(targetSummary.averageProgress)}</span>
                     <Badge variant={deltaVariant(activeComparison.progressDelta)}>
                       {formatDelta(activeComparison.progressDelta, " pts")}
                     </Badge>
                   </div>
-                  <p className="mt-1 text-xs tabular-nums text-muted-foreground">vs {baseSummary.averageProgress.toFixed(1)}%</p>
+                  <p className="mt-1 text-xs tabular-nums text-muted-foreground">vs {formatAverage(baseSummary.averageProgress)}</p>
                 </div>
                 <div className="rounded-lg border border-border bg-card p-3">
                   <p className="text-xs text-muted-foreground">Objectives</p>
@@ -187,7 +194,7 @@ export function PeriodComparisonSection({
                     <TableCell className="text-right tabular-nums">{summary.objectiveCount}</TableCell>
                     <TableCell className="text-right tabular-nums">{summary.completedObjectives}</TableCell>
                     <TableCell className="text-right tabular-nums">{summary.keyResultCount}</TableCell>
-                    <TableCell className="text-right tabular-nums">{summary.averageProgress.toFixed(1)}%</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatAverage(summary.averageProgress)}</TableCell>
                     <TableCell className="text-right">
                       {previousDelta ? (
                         <Badge variant={deltaVariant(previousDelta.progressDelta)}>

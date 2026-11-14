@@ -63,6 +63,7 @@ export async function countActiveAdmins(transaction: Transaction, companyId: str
 
 export async function recordAudit(executor: Executor, entry: {
   companyId: string;
+  cycleId?: string | null;
   actorId: string;
   action: string;
   entityType: string;

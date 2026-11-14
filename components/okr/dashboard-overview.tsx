@@ -28,7 +28,8 @@ function objectiveStatus(objective: Objective): Status {
   return "off_track";
 }
 
-function formatPercent(value: number) {
+function formatPercent(value: number | null) {
+  if (value === null) return "No KRs";
   return `${Math.round(value)}%`;
 }
 
@@ -42,7 +43,8 @@ function SectionHeading({ title, description }: { title: string; description: st
   );
 }
 
-function Delta({ value, label }: { value: number; label: string }) {
+function Delta({ value, label }: { value: number | null; label: string }) {
+  if (value === null) return <span className="text-sm text-muted-foreground">No comparable progress {label}</span>;
   if (value === 0) return <span className="text-sm text-muted-foreground">No change {label}</span>;
   const up = value > 0;
   const Icon = up ? TrendingUp : TrendingDown;
@@ -73,7 +75,7 @@ function ProgressTrendChart({ summaries, selectedId }: { summaries: CycleSummary
     return <p className="grid h-full min-h-40 place-items-center text-sm text-muted-foreground">Progress history appears once cycles exist.</p>;
   }
   const xFor = (index: number) => (summaries.length === 1 ? 50 : 6 + (index * 88) / (summaries.length - 1));
-  const points = summaries.map((summary, index) => ({ summary, x: xFor(index), y: yFor(summary.averageProgress) }));
+  const points = summaries.map((summary, index) => ({ summary, x: xFor(index), y: yFor(summary.averageProgress ?? 0) }));
   const lastIndex = points.length - 1;
   const hoveredPoint = hovered === null ? null : points[hovered];
 
