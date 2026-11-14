@@ -7,6 +7,7 @@ import { calculateProgress } from "@/server/okr-math";
 import { recomputeKeyResultFromCheckIns, refreshObjectiveProgress, todayWithinCycle } from "@/server/okr-mutations";
 import {
   assertActiveMembers,
+  canEditKeyResult,
   canEditObjective,
   canViewObjective,
   InputError,
@@ -55,7 +56,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       if (!row) throw new InputError("Key result not found in this workspace.", 404);
       const { keyResult, objective } = row;
       const facts = await loadObjectiveAccessFacts(transaction, context.companyId, objective.id, objective.ownerId);
-      if (!canViewObjective(objective, viewer, facts.ownerManagerId, facts.accessUserIds)) throw new InputError("Key result not found in this workspace.", 404);
+      if (!canViewObjective(objective, viewer, facts)) throw new InputError("Key result not found in this workspace.", 404);
       if (row.cycleStatus === "closed") throw new InputError("This cycle is closed; key results cannot be changed.", 403);
       if (input.current !== undefined && row.cycleStatus !== "open") throw new InputError("Open the cycle before checking in on key results.", 403);
       if (keyResult.version !== version) {
@@ -68,11 +69,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       }
 
       const krEditors = await transaction.select({ userId: keyResultEditors.userId }).from(keyResultEditors).where(eq(keyResultEditors.keyResultId, id));
-      const goalEditor = canEditObjective(objective, viewer, facts.editorIds);
-      const krOwner = keyResult.ownerId === actorId;
+      const goalEditor = canEditObjective(objective, viewer, facts);
       const unowned = !objective.ownerId && !keyResult.ownerId;
-      const canCheckIn = goalEditor || krOwner || unowned || krEditors.some((editor) => editor.userId === actorId);
-      if (checkInOnly ? !canCheckIn : !(goalEditor || krOwner || unowned)) {
+      // Named key result editors may only check in; content edits need the owner, their managers or a goal editor.
+      const canCheckIn = canEditKeyResult(objective, keyResult, viewer, facts, krEditors.map((editor) => editor.userId));
+      const canEditContent = canEditKeyResult(objective, keyResult, viewer, facts, []);
+      if (checkInOnly ? !canCheckIn : !canEditContent) {
         throw new InputError("You do not have permission to update this key result.", 403);
       }
       if ((input.ownerId !== undefined || input.editorIds !== undefined) && !(goalEditor || unowned)) {

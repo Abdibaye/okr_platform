@@ -3,13 +3,12 @@ import { NextResponse } from "next/server";
 import { contextOr401, isResponse } from "@/server/api-utils";
 import { getDb } from "@/server/db";
 import { buildPeriodComparisons } from "@/server/okr-math";
-import { canEditObjective, canManagePrivacy, canViewObjective, viewerFromContext } from "@/server/objectives";
+import { canEditKeyResult, canEditObjective, canManagePrivacy, canViewObjective, loadAccessIndex, viewerFromContext } from "@/server/org-access";
 import {
   auditLogs,
   companyMemberships,
   keyResultEditors,
   keyResults,
-  objectiveAccess,
   objectives,
   okrCycles,
   teamMemberships,
@@ -59,23 +58,10 @@ export async function GET() {
       inArray(objectives.cycleId, cycleIds),
     )).orderBy(desc(objectives.createdAt))
     : [];
-  const accessRows = allObjectives.length
-    ? await database.select({ objectiveId: objectiveAccess.objectiveId, userId: objectiveAccess.userId, permission: objectiveAccess.permission })
-      .from(objectiveAccess)
-      .where(eq(objectiveAccess.companyId, context.companyId))
-    : [];
-  const accessByObjective = new Map<string, { userId: string; permission: "viewer" | "editor" }[]>();
-  for (const row of accessRows) {
-    const list = accessByObjective.get(row.objectiveId) ?? [];
-    list.push({ userId: row.userId, permission: row.permission });
-    accessByObjective.set(row.objectiveId, list);
-  }
-
+  const accessIndex = await loadAccessIndex(database, context.companyId, allObjectives.map((objective) => objective.id));
   const visibleIds = new Set<string>();
   for (const objective of allObjectives) {
-    const access = accessByObjective.get(objective.id) ?? [];
-    const ownerManagerId = objective.ownerId ? membersById.get(objective.ownerId)?.managerId ?? null : null;
-    if (canViewObjective(objective, viewer, ownerManagerId, new Set(access.map((row) => row.userId)))) visibleIds.add(objective.id);
+    if (canViewObjective(objective, viewer, accessIndex.factsFor(objective))) visibleIds.add(objective.id);
   }
   const objectiveRows = allObjectives.filter((objective) => visibleIds.has(objective.id) && !objective.archivedAt);
   const objectiveIds = objectiveRows.map((objective) => objective.id);
@@ -111,26 +97,23 @@ export async function GET() {
   };
 
   const hydratedObjectives = objectiveRows.map((objective) => {
-    const access = accessByObjective.get(objective.id) ?? [];
-    const editorIds = new Set(access.filter((row) => row.permission === "editor").map((row) => row.userId));
-    const ownerManagerId = objective.ownerId ? membersById.get(objective.ownerId)?.managerId ?? null : null;
-    const canEdit = canEditObjective(objective, viewer, editorIds);
-    const unowned = !objective.ownerId;
+    const facts = accessIndex.factsFor(objective);
+    const canEdit = canEditObjective(objective, viewer, facts);
     return {
       ...objective,
       owner: person(objective.ownerId),
       team: objective.teamId ? teamsById.get(objective.teamId) ?? null : null,
-      access,
+      access: accessIndex.accessFor(objective.id),
       canEdit,
-      canManage: canManagePrivacy(objective, viewer),
-      canApprove: context.role === "admin" || (ownerManagerId !== null && ownerManagerId === userId),
+      canManage: canManagePrivacy(objective, viewer, facts),
+      canApprove: context.role === "admin" || (facts.ownerManagerId !== null && facts.ownerManagerId === userId),
       keyResults: resultRows.filter((result) => result.objectiveId === objective.id).map((result) => {
         const editors = editorsByResult.get(result.id) ?? [];
         return {
           ...result,
           owner: person(result.ownerId),
           editorIds: editors,
-          canCheckIn: canEdit || result.ownerId === userId || editors.includes(userId) || (unowned && !result.ownerId),
+          canCheckIn: canEditKeyResult(objective, result, viewer, facts, editors),
         };
       }),
     };

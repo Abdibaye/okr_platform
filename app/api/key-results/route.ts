@@ -48,10 +48,10 @@ export async function POST(request: Request) {
       if (!row) throw new InputError("Goal not found in this workspace.", 404);
       const viewer = viewerFromContext(context);
       const facts = await loadObjectiveAccessFacts(transaction, context.companyId, objectiveId, row.objective.ownerId);
-      if (!canViewObjective(row.objective, viewer, facts.ownerManagerId, facts.accessUserIds)) throw new InputError("Goal not found in this workspace.", 404);
+      if (!canViewObjective(row.objective, viewer, facts)) throw new InputError("Goal not found in this workspace.", 404);
       if (row.cycleStatus === "closed") throw new InputError("This cycle is closed; key results cannot be added.", 403);
       // Unowned legacy goals stay open to any member who can see them.
-      if (row.objective.ownerId && !canEditObjective(row.objective, viewer, facts.editorIds)) {
+      if (row.objective.ownerId && !canEditObjective(row.objective, viewer, facts)) {
         throw new InputError("Only the goal owner, editors, managers and admins can add key results.", 403);
       }
       const ownerId = input.ownerId === undefined ? row.objective.ownerId : input.ownerId;

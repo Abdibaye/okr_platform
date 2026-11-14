@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Bell,
   CalendarRange,
   ChevronsLeft,
   ChevronsRight,
@@ -21,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ThemeToggle } from "@/components/okr/theme-toggle";
+import { NotificationBell } from "@/components/okr/notification-bell";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import type { Workspace } from "@/app/types";
@@ -98,9 +98,8 @@ function NavList({ items, expanded, onNavigate }: {
   );
 }
 
-function SidebarFooter({ workspace, unreadCount, expanded, onSignOut, onNavigate }: {
+function SidebarFooter({ workspace, expanded, onSignOut, onNavigate }: {
   workspace: Workspace;
-  unreadCount: number;
   expanded: boolean;
   onSignOut: () => void;
   onNavigate?: () => void;
@@ -108,19 +107,7 @@ function SidebarFooter({ workspace, unreadCount, expanded, onSignOut, onNavigate
   const profileLabel = `${workspace.user.name} · ${workspace.user.email} · ${workspace.company.role}`;
   return (
     <div className="grid gap-1 border-t border-sidebar-border pt-3">
-      <SidebarTip show={!expanded} label={`${unreadCount} recent audit updates`}>
-        <Link href="/dashboard/activity" onClick={onNavigate} aria-label={`${unreadCount} recent audit updates`} className={cn(itemClass, !expanded && "justify-center px-0")}>
-          <span className="relative">
-            <Bell className="size-5" aria-hidden="true" />
-            {unreadCount > 0 && (
-              <span className="absolute -right-2 -top-1.5 grid min-w-4 place-items-center rounded-full bg-brand-coral px-1 text-[10px] font-semibold text-white">
-                {unreadCount}
-              </span>
-            )}
-          </span>
-          {expanded && <span>Recent updates</span>}
-        </Link>
-      </SidebarTip>
+      <NotificationBell expanded={expanded} itemClass={itemClass} onNavigate={onNavigate} />
       <div className={cn("flex items-center", expanded ? "gap-3 px-1.5" : "justify-center")}>
         <ThemeToggle />
         {expanded && <span className="text-sm text-sidebar-muted">Theme</span>}
@@ -158,12 +145,10 @@ function Logo() {
 
 export function AppShell({
   workspace,
-  unreadCount,
   onSignOut,
   children,
 }: {
   workspace: Workspace;
-  unreadCount: number;
   onSignOut: () => void;
   peopleView?: boolean;
   children: React.ReactNode;
@@ -224,7 +209,7 @@ export function AppShell({
           <nav aria-label="Primary navigation" className="flex-1 overflow-y-auto">
             <NavList items={items} expanded={expanded} />
           </nav>
-          <SidebarFooter workspace={workspace} unreadCount={unreadCount} expanded={expanded} onSignOut={onSignOut} />
+          <SidebarFooter workspace={workspace} expanded={expanded} onSignOut={onSignOut} />
         </aside>
 
         <header className="sticky top-0 z-40 flex items-center gap-3 bg-sidebar px-4 py-3 text-sidebar-foreground md:hidden">
@@ -268,7 +253,7 @@ export function AppShell({
               <nav aria-label="Mobile navigation" className="flex-1 overflow-y-auto">
                 <NavList items={items} expanded onNavigate={() => setDrawerOpen(false)} />
               </nav>
-              <SidebarFooter workspace={workspace} unreadCount={unreadCount} expanded onSignOut={onSignOut} onNavigate={() => setDrawerOpen(false)} />
+              <SidebarFooter workspace={workspace} expanded onSignOut={onSignOut} onNavigate={() => setDrawerOpen(false)} />
             </DialogContent>
         </Dialog>
       </div>

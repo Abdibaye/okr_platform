@@ -2,7 +2,6 @@ import { and, eq, inArray, isNull } from "drizzle-orm";
 import { isUuid } from "./api-utils";
 import { wouldCreateAlignmentLoop } from "./okr-math";
 import type { Transaction } from "./people";
-import type { RequestContext } from "./request-context";
 import {
   companyMemberships,
   keyResultEditors,
@@ -179,76 +178,24 @@ export async function replaceObjectiveAccess(
   if (rows.length) await transaction.insert(objectiveAccess).values(rows);
 }
 
+// Permission rules live in org-access; re-exported so existing routes keep one import site.
+export {
+  canEditKeyResult,
+  canEditObjective,
+  canManagePrivacy,
+  canViewObjective,
+  loadObjectiveAccessFacts,
+  viewerFromContext,
+  type ObjectiveAccessFacts,
+  type ViewerFacts,
+  type VisibilityFacts,
+} from "./org-access";
+
 export async function replaceKeyResultEditors(transaction: Transaction, companyId: string, keyResultId: string, editorIds: string[]) {
   await transaction.delete(keyResultEditors).where(eq(keyResultEditors.keyResultId, keyResultId));
   if (editorIds.length) {
     await transaction.insert(keyResultEditors).values(editorIds.map((userId) => ({ companyId, keyResultId, userId })));
   }
-}
-
-export interface VisibilityFacts {
-  visibility: GoalVisibility;
-  teamId: string | null;
-  ownerId: string | null;
-  createdBy: string;
-}
-
-export interface ViewerFacts {
-  userId: string;
-  role: string;
-  teamIds: string[];
-}
-
-/**
- * Privacy rules: company goals are visible to everyone; team goals to that team's members and managers;
- * restricted goals only to named people. Owner, owner's manager, named access, the creator and admins always see it.
- */
-export function canViewObjective(
-  objective: VisibilityFacts,
-  viewer: ViewerFacts,
-  ownerManagerId: string | null,
-  accessUserIds: Set<string>,
-) {
-  if (objective.visibility === "company") return true;
-  if (viewer.role === "admin") return true;
-  if (objective.ownerId === viewer.userId || objective.createdBy === viewer.userId) return true;
-  if (ownerManagerId && ownerManagerId === viewer.userId) return true;
-  if (accessUserIds.has(viewer.userId)) return true;
-  if (objective.visibility !== "team") return false;
-  return viewer.role === "manager" || Boolean(objective.teamId && viewer.teamIds.includes(objective.teamId));
-}
-
-/** Admins, managers, the owner and named editors may change a goal's content. */
-export function canEditObjective(objective: { ownerId: string | null }, viewer: ViewerFacts, editorIds: Set<string>) {
-  return viewer.role === "admin" || viewer.role === "manager" || objective.ownerId === viewer.userId || editorIds.has(viewer.userId);
-}
-
-/** Only admins, managers and the owner may change ownership or privacy. */
-export function canManagePrivacy(objective: { ownerId: string | null }, viewer: ViewerFacts) {
-  return viewer.role === "admin" || viewer.role === "manager" || objective.ownerId === viewer.userId;
-}
-
-export function viewerFromContext(context: RequestContext): ViewerFacts {
-  return { userId: context.session.user.id, role: context.role, teamIds: context.teamIds };
-}
-
-/** Loads the access facts needed to evaluate view/edit permissions for one goal. */
-export async function loadObjectiveAccessFacts(executor: Executor, companyId: string, objectiveId: string, ownerId: string | null) {
-  const access = await executor.select({ userId: objectiveAccess.userId, permission: objectiveAccess.permission })
-    .from(objectiveAccess).where(and(eq(objectiveAccess.companyId, companyId), eq(objectiveAccess.objectiveId, objectiveId)));
-  let ownerManagerId: string | null = null;
-  if (ownerId) {
-    const [owner] = await executor.select({ managerId: companyMemberships.managerId }).from(companyMemberships).where(and(
-      eq(companyMemberships.companyId, companyId),
-      eq(companyMemberships.userId, ownerId),
-    )).limit(1);
-    ownerManagerId = owner?.managerId ?? null;
-  }
-  return {
-    accessUserIds: new Set(access.map((row) => row.userId)),
-    editorIds: new Set(access.filter((row) => row.permission === "editor").map((row) => row.userId)),
-    ownerManagerId,
-  };
 }
 
 export async function teamMemberIds(executor: Executor, companyId: string, teamId: string) {

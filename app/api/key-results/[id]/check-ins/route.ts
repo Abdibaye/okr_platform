@@ -6,7 +6,7 @@ import { keyResultEditors, keyResults, krCheckIns, objectives, okrCycles, user }
 import { calculateProgress, compareCheckInsNewestFirst, selectEffectiveCheckIn } from "@/server/okr-math";
 import { recomputeKeyResultFromCheckIns, refreshObjectiveProgress, todayWithinCycle } from "@/server/okr-mutations";
 import {
-  canEditObjective,
+  canEditKeyResult,
   canViewObjective,
   InputError,
   isIsoDate,
@@ -14,6 +14,7 @@ import {
   viewerFromContext,
 } from "@/server/objectives";
 import type { RequestContext } from "@/server/request-context";
+import { resolveNotifications } from "@/server/notifications";
 import type { Transaction } from "@/server/people";
 
 const CONFIDENCE = ["on_track", "at_risk", "off_track"] as const;
@@ -35,7 +36,7 @@ async function loadVisibleKeyResult(executor: ReturnType<typeof getDb> | Transac
   const [row] = lock ? await query.for("update", { of: keyResults }).limit(1) : await query.limit(1);
   if (!row) throw new InputError(NOT_FOUND, 404);
   const facts = await loadObjectiveAccessFacts(executor, context.companyId, row.objective.id, row.objective.ownerId);
-  if (!canViewObjective(row.objective, viewerFromContext(context), facts.ownerManagerId, facts.accessUserIds)) {
+  if (!canViewObjective(row.objective, viewerFromContext(context), facts)) {
     throw new InputError(NOT_FOUND, 404);
   }
   return { ...row, facts };
@@ -131,11 +132,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
       const krEditors = await transaction.select({ userId: keyResultEditors.userId }).from(keyResultEditors)
         .where(eq(keyResultEditors.keyResultId, id));
-      const unowned = !objective.ownerId && !keyResult.ownerId;
-      const canCheckIn = canEditObjective(objective, viewer, facts.editorIds)
-        || keyResult.ownerId === actorId
-        || krEditors.some((editor) => editor.userId === actorId)
-        || unowned;
+      const canCheckIn = canEditKeyResult(objective, keyResult, viewer, facts, krEditors.map((editor) => editor.userId));
       if (!canCheckIn) throw new InputError("Only the key result owner, its editors, goal owners and editors, managers and admins can check in.", 403);
       if (keyResult.version !== version) {
         throw new InputError("Someone else updated this key result — refresh and try again.", 409);
@@ -179,6 +176,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       }).returning();
       const recomputed = await recomputeKeyResultFromCheckIns(transaction, id, context.companyId, keyResult.version);
       await refreshObjectiveProgress(transaction, objective.id, context.companyId);
+      // A fresh check-in answers any open "please check in" nudges for this key result.
+      await resolveNotifications(transaction, context.companyId, id, ["check_in_cadence", "check_in_request"]);
+      await resolveNotifications(transaction, context.companyId, objective.id, ["check_in_request"]);
       return {
         keyResult: recomputed.keyResult,
         checkIn: { ...checkIn, isCurrentEffective: recomputed.effectiveCheckIn?.id === checkIn.id },

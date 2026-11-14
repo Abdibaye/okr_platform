@@ -57,7 +57,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       if (!current) throw new InputError("Goal not found.", 404);
       const objective = current.objective;
       const facts = await loadObjectiveAccessFacts(transaction, context.companyId, id, objective.ownerId);
-      if (!canViewObjective(objective, viewer, facts.ownerManagerId, facts.accessUserIds)) throw new InputError("Goal not found.", 404);
+      if (!canViewObjective(objective, viewer, facts)) throw new InputError("Goal not found.", 404);
       if (current.cycleStatus === "closed") throw new InputError("This cycle is closed; goals cannot be changed.", 403);
       if (objective.version !== version) {
         return NextResponse.json({
@@ -67,8 +67,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           description: objective.description,
         }, { status: 409 });
       }
-      if (!canEditObjective(objective, viewer, facts.editorIds)) throw new InputError("You do not have permission to edit this goal.", 403);
-      const managesPrivacy = canManagePrivacy(objective, viewer);
+      if (!canEditObjective(objective, viewer, facts)) throw new InputError("You do not have permission to edit this goal.", 403);
+      const managesPrivacy = canManagePrivacy(objective, viewer, facts);
       const touchesPrivacy = input.ownerId !== undefined || input.visibility !== undefined || input.viewerIds !== undefined || input.editorIds !== undefined;
       if ((touchesPrivacy || archiving) && !managesPrivacy) {
         throw new InputError("Only the goal owner, managers and admins can change ownership, privacy or archive a goal.", 403);

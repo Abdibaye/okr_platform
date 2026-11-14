@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CopyPlus } from "lucide-react";
+import { BellRing, CopyPlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,7 +36,9 @@ export default function CyclesPage() {
     isAdmin,
     busy,
     send,
+    setFeedback,
   } = useWorkspace();
+  const [lastSweep, setLastSweep] = useState<{ created: number; resolved: number; evaluated: number } | null>(null);
 
   const [cycleName, setCycleName] = useState("");
   const [dateMode, setDateMode] = useState<"preset" | "custom">("preset");
@@ -110,6 +112,18 @@ export default function CyclesPage() {
       "Cycle reopened.",
     );
     if (reopened) setReopenReason("");
+  }
+
+  async function runReminders() {
+    const result = await send("/api/reminders/sweep", "POST", undefined, "Reminders checked.");
+    if (!result) return;
+    setLastSweep(result);
+    setFeedback({
+      tone: "success",
+      message: result.created
+        ? `Sent ${result.created} new reminder${result.created === 1 ? "" : "s"}.`
+        : "No new reminders needed; everyone already has the reminders that apply.",
+    });
   }
 
   if (!workspace) return null;
@@ -303,6 +317,28 @@ export default function CyclesPage() {
             </Button>
           </CardContent>
         </Card>
+
+        {isAdmin && (
+          <Card className="shadow-none lg:col-span-2">
+            <CardHeader>
+              <CardTitle>Reminders</CardTitle>
+              <CardDescription>
+                Reminds owners in open cycles about key results without a recent check-in, goals due within 7 days and overdue work.
+                Each reminder is sent once per period, so running this again never creates duplicates.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-wrap items-center gap-3">
+              <Button variant="outline" disabled={busy} onClick={runReminders}>
+                <BellRing aria-hidden="true" /> Run reminders now
+              </Button>
+              {lastSweep && (
+                <p className="text-sm text-muted-foreground" role="status">
+                  Last run: {lastSweep.created} created · {lastSweep.resolved} cleared · {lastSweep.evaluated} goals and key results checked
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {carryForwardOpen && <CarryForwardDialog defaultSourceId={selectedCycle?.id ?? ""} onClose={() => setCarryForwardOpen(false)} />}

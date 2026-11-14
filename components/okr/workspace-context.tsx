@@ -5,11 +5,6 @@ import type { Cycle, Workspace } from "@/app/types";
 
 export type Feedback = { tone: "success" | "error"; message: string } | null;
 
-function csvCell(value: string | number) {
-  const text = String(value);
-  return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
-}
-
 interface WorkspaceContextType {
   workspace: Workspace | null;
   loading: boolean;
@@ -129,37 +124,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  // The server builds the CSV from goals this person can see, so hidden goals never reach the file.
   function exportCycle() {
     if (!selectedCycle) return;
-    const rows = [
-      ["Cycle", "Objective", "Key Result", "Metric Type", "Direction", "Baseline", "Target", "Current", "Progress %"],
-    ];
-    for (const objective of selectedCycle.objectives) {
-      if (!objective.keyResults.length) {
-        rows.push([selectedCycle.name, objective.title, "", "", "", "", "", "", objective.progress ?? "0"]);
-      }
-      for (const kr of objective.keyResults) {
-        rows.push([
-          selectedCycle.name,
-          objective.title,
-          kr.title,
-          kr.metricType,
-          kr.direction,
-          kr.baseline,
-          kr.target,
-          kr.current,
-          kr.progress,
-        ]);
-      }
-    }
-    const csv = rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.href = url;
-    link.download = `${selectedCycle.name.toLowerCase().replaceAll(/\s+/g, "-")}-okrs.csv`;
+    link.href = `/api/exports/goals?cycleId=${encodeURIComponent(selectedCycle.id)}`;
+    link.download = "";
     link.click();
-    URL.revokeObjectURL(url);
   }
 
   async function logout() {

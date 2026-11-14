@@ -9,6 +9,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  BellRing,
   Download,
   History,
   List,
@@ -43,6 +44,7 @@ import { ApprovalBadge, GoalSheet, PersonCell } from "@/components/okr/goal-shee
 import { formatDate, levelIcons, levelLabels, progressTone, statusLabels } from "@/components/okr/goal-utils";
 import { KeyResultDialog } from "@/components/okr/key-result-dialog";
 import { KeyResultHistoryDialog } from "@/components/okr/key-result-history-dialog";
+import { OPEN_GOAL_EVENT } from "@/components/okr/notification-bell";
 import { Progress } from "@/components/okr/progress";
 import { useWorkspace } from "@/components/okr/workspace-context";
 import type { CheckInEntry, GoalStatus, KeyResult, Objective } from "@/app/types";
@@ -77,7 +79,7 @@ function ProgressCell({ value, label }: { value: number | null; label: string })
 }
 
 export default function GoalsPage() {
-  const { workspace, selectedCycle, setSelectedCycleId, busy, send, exportCycle, loadWorkspace, setFeedback } = useWorkspace();
+  const { workspace, selectedCycle, setSelectedCycleId, busy, send, exportCycle, loadWorkspace, setFeedback, isAdmin } = useWorkspace();
   const [tab, setTab] = useState<GoalTab>("mine");
   const [ownerFilter, setOwnerFilter] = useState(ALL);
   const [statusFilter, setStatusFilter] = useState(ALL);
@@ -111,6 +113,8 @@ export default function GoalsPage() {
     return map;
   }, [cycleObjectives]);
   const memberById = useMemo(() => new Map((workspace?.members ?? []).map((member) => [member.id, member])), [workspace?.members]);
+  // Goals the viewer can see in any cycle; a parent id outside this set belongs to a goal they may not see.
+  const visibleGoalIds = useMemo(() => new Set((workspace?.cycles ?? []).flatMap((cycle) => cycle.objectives.map((objective) => objective.id))), [workspace?.cycles]);
   const cycleClosed = selectedCycle?.status === "closed";
   // Check-ins need an open cycle (drafts aren't tracked yet, closed cycles are locked).
   const checkInOpen = selectedCycle?.status === "open";
@@ -128,6 +132,21 @@ export default function GoalsPage() {
       setSheet({ objective });
     }
   }, [workspace, deepLinkHandled, setSelectedCycleId]);
+
+  // The notification bell asks an already-open Goals page to show a goal.
+  useEffect(() => {
+    const onOpenGoal = (event: Event) => {
+      const goalId = (event as CustomEvent<string>).detail;
+      const cycle = workspace?.cycles.find((candidate) => candidate.objectives.some((objective) => objective.id === goalId));
+      const objective = cycle?.objectives.find((candidate) => candidate.id === goalId);
+      if (cycle && objective) {
+        setSelectedCycleId(cycle.id);
+        setSheet({ objective });
+      }
+    };
+    window.addEventListener(OPEN_GOAL_EVENT, onOpenGoal);
+    return () => window.removeEventListener(OPEN_GOAL_EVENT, onOpenGoal);
+  }, [workspace, setSelectedCycleId]);
 
   useEffect(() => {
     setPage(1);
@@ -211,8 +230,27 @@ export default function GoalsPage() {
     if (done) setArchiveTarget(null);
   }
 
+  // Admins and anyone above the owner in the reporting chain can ask them for a check-in (the server re-checks).
+  function canRequestCheckIn(ownerId: string | null) {
+    const me = workspace?.user.id;
+    if (!ownerId || !me || ownerId === me || !memberById.get(ownerId)?.isActive) return false;
+    if (isAdmin) return true;
+    const seen = new Set<string>();
+    for (let managerId = memberById.get(ownerId)?.managerId ?? null; managerId && !seen.has(managerId); managerId = memberById.get(managerId)?.managerId ?? null) {
+      if (managerId === me) return true;
+      seen.add(managerId);
+    }
+    return false;
+  }
+
+  async function requestCheckIn(target: { objectiveId: string } | { keyResultId: string }, ownerName: string) {
+    const data = await send("/api/reminders/request", "POST", target, `Check-in requested from ${ownerName}.`);
+    if (data && !data.created) setFeedback({ tone: "success", message: `${ownerName} was already asked to check in on this today.` });
+  }
+
   function goalActions(objective: Objective) {
     const writable = !cycleClosed;
+    const canRequest = checkInOpen && objective.status === "active" && canRequestCheckIn(objective.ownerId);
     const canSubmit = writable && objective.canEdit && (
       objective.approvalStatus === "changes_requested" || (objective.approvalStatus === "not_required" && Boolean(selectedCycle?.requireApproval))
     );
@@ -229,6 +267,11 @@ export default function GoalsPage() {
           <DropdownMenuItem disabled={!writable || !objective.canEdit} onSelect={() => setKrDialog({ objective, keyResult: null })}>
             <Plus /> Add key result
           </DropdownMenuItem>
+          {canRequest && objective.owner && (
+            <DropdownMenuItem disabled={busy} onSelect={() => void requestCheckIn({ objectiveId: objective.id }, objective.owner!.name)}>
+              <BellRing /> Request check-in
+            </DropdownMenuItem>
+          )}
           {(canSubmit || canReview) && <DropdownMenuSeparator />}
           {canSubmit && (
             <DropdownMenuItem disabled={busy} onSelect={() => void approval(objective, "submit")}>
@@ -261,6 +304,10 @@ export default function GoalsPage() {
   function renderKeyResultRow(objective: Objective, keyResult: KeyResult, depth: number) {
     const progress = Number(keyResult.progress);
     const writable = !cycleClosed;
+    // The key result's owner, or the goal owner when it has none, is who gets asked.
+    const krOwnerId = keyResult.ownerId ?? objective.ownerId;
+    const krOwner = krOwnerId ? memberById.get(krOwnerId) : undefined;
+    const krRequestOwner = checkInOpen && objective.status === "active" && progress < 100 && canRequestCheckIn(krOwnerId) ? krOwner : undefined;
     return (
       <TableRow key={`kr-${keyResult.id}`} className="bg-muted/20">
         <TableCell className="whitespace-normal">
@@ -294,6 +341,11 @@ export default function GoalsPage() {
               <DropdownMenuItem disabled={!writable || !objective.canEdit} onSelect={() => setKrDialog({ objective, keyResult })}>
                 <Pencil /> Edit key result
               </DropdownMenuItem>
+              {krRequestOwner && (
+                <DropdownMenuItem disabled={busy} onSelect={() => void requestCheckIn({ keyResultId: keyResult.id }, krRequestOwner.name)}>
+                  <BellRing /> Request check-in
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </TableCell>
@@ -342,6 +394,7 @@ export default function GoalsPage() {
                   <span className="sr-only">Level: </span>{levelLabels[objective.level]}
                   {objective.team && <> · {objective.team.name}</>}
                   {view === "list" && parent && <> · aligned to “{parent.title}”</>}
+                  {objective.parentObjectiveId && !visibleGoalIds.has(objective.parentObjectiveId) && <> · aligned to a <span className="italic">Private goal</span></>}
                   {objective.copiedFromObjectiveId && <> · carried forward</>}
                 </p>
               </div>

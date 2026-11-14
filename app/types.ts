@@ -163,3 +163,30 @@ export interface AuditLog {
   reason: string;
   createdAt: string;
 }
+
+export type EmailStatus = "in_app_only" | "pending" | "sent" | "failed";
+
+export interface AppNotification {
+  id: string;
+  type: "invitation" | "assignment" | "check_in_request" | "check_in_cadence" | "approaching_deadline" | "overdue_update" | "mention" | "approval";
+  title: string;
+  body: string;
+  linkPath: string | null;
+  actorName: string | null;
+  readAt: string | null;
+  createdAt: string;
+  emailStatus: EmailStatus;
+  emailError: string | null;
+  emailAttempts: number;
+  lastAttemptAt: string | null;
+}
+
+export interface GoalComment {
+  id: string;
+  keyResultId: string | null;
+  authorId: string;
+  authorName: string;
+  body: string;
+  mentions: { id: string; name: string }[];
+  createdAt: string;
+}

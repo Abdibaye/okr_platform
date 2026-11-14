@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import type { Cycle, GoalLevel, GoalStatus, GoalVisibility, KeyResult, Objective } from "@/app/types";
 import { apiRequest, approvalLabels, describeSaveError, initials, levelLabels, selfAndDescendantIds, statusLabels } from "./goal-utils";
+import { GoalComments } from "./goal-comments";
 import { useWorkspace } from "./workspace-context";
 
 const NONE = "none";
@@ -135,7 +136,7 @@ export function GoalSheet({
     visibility: "company",
     access: [],
   });
-  const [openSections, setOpenSections] = useState({ basics: true, privacy: isCreate, keyResults: false });
+  const [openSections, setOpenSections] = useState({ basics: true, privacy: isCreate, keyResults: false, comments: false });
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [reloadAfterConflict, setReloadAfterConflict] = useState(false);
@@ -157,6 +158,10 @@ export function GoalSheet({
     const excluded = objective ? selfAndDescendantIds(cycle.objectives, objective.id) : new Set<string>();
     return cycle.objectives.filter((candidate) => !excluded.has(candidate.id));
   }, [cycle.objectives, objective]);
+  const visibleParent = useMemo(
+    () => (workspace?.cycles ?? []).flatMap((candidate) => candidate.objectives).find((candidate) => candidate.id === draft.parentObjectiveId),
+    [workspace?.cycles, draft.parentObjectiveId],
+  );
 
   const cycleClosed = cycle.status === "closed";
   const canEditContent = !cycleClosed && (isCreate || Boolean(objective?.canEdit));
@@ -340,6 +345,10 @@ export function GoalSheet({
                     <SelectTrigger id="goal-parent" className="w-full"><SelectValue placeholder="Not aligned" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value={NONE}>Not aligned</SelectItem>
+                      {draft.parentObjectiveId !== NONE && !parentOptions.some((candidate) => candidate.id === draft.parentObjectiveId) && (
+                        // The parent is outside this cycle or hidden from this person: keep the link without revealing it.
+                        <SelectItem value={draft.parentObjectiveId}>{visibleParent ? `${levelLabels[visibleParent.level]} · ${visibleParent.title}` : "Private goal"}</SelectItem>
+                      )}
                       {parentOptions.map((candidate) => (
                         <SelectItem key={candidate.id} value={candidate.id}>{levelLabels[candidate.level]} · {candidate.title}</SelectItem>
                       ))}
@@ -487,6 +496,17 @@ export function GoalSheet({
                 <Button type="button" variant="outline" disabled={!canEditContent} onClick={() => onAddKeyResult(objective)}>
                   <Plus aria-hidden="true" /> Add key result
                 </Button>
+              </Section>
+            )}
+
+            {objective && (
+              <Section
+                id="goal-comments"
+                title="Comments"
+                open={openSections.comments}
+                onToggle={() => setOpenSections((previous) => ({ ...previous, comments: !previous.comments }))}
+              >
+                {openSections.comments && <GoalComments objectiveId={objective.id} />}
               </Section>
             )}
           </div>

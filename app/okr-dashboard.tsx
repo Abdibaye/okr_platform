@@ -310,7 +310,7 @@ export function OkrDashboard() {
     .find((keyResult) => keyResult.id === checkInKrId);
 
   return (
-    <AppShell workspace={workspace} unreadCount={workspace.audit.length} onSignOut={logout} peopleView={peopleView && canManage}>
+    <AppShell workspace={workspace} onSignOut={logout} peopleView={peopleView && canManage}>
       {peopleView && canManage ? (
         <section id="team"><PeopleSection role={workspace.company.role} currentUserId={workspace.user.id} /></section>
       ) : <>

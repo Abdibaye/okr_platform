@@ -48,11 +48,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       if (!current) throw new InputError("Goal not found.", 404);
       const goal = current.objective;
       const facts = await loadObjectiveAccessFacts(transaction, context.companyId, id, goal.ownerId);
-      if (!canViewObjective(goal, viewer, facts.ownerManagerId, facts.accessUserIds)) throw new InputError("Goal not found.", 404);
+      if (!canViewObjective(goal, viewer, facts)) throw new InputError("Goal not found.", 404);
       if (current.cycleStatus === "closed") throw new InputError("This cycle is closed; approvals cannot change.", 403);
 
       const isApprover = context.role === "admin" || (facts.ownerManagerId !== null && facts.ownerManagerId === actorId);
-      if (actionName === "submit" && !canEditObjective(goal, viewer, facts.editorIds)) {
+      if (actionName === "submit" && !canEditObjective(goal, viewer, facts)) {
         throw new InputError("Only the goal owner, editors, managers and admins can submit a goal for approval.", 403);
       }
       if (actionName !== "submit" && !isApprover) {

@@ -24,7 +24,7 @@ function DashboardShellContent({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AppShell workspace={workspace} unreadCount={workspace.audit.length} onSignOut={logout}>
+    <AppShell workspace={workspace} onSignOut={logout}>
       {feedback && (
         <Alert variant={feedback.tone === "error" ? "destructive" : "default"} className="mb-6">
           <AlertTitle>{feedback.tone === "error" ? "Action blocked" : "Done"}</AlertTitle>
