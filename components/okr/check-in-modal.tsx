@@ -10,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import type { CheckInEntry, Confidence, Cycle, KeyResult } from "@/app/types";
 import { apiRequest, formatDate } from "./goal-utils";
-import { useWorkspace } from "./workspace-context";
 
 export const confidenceLabels: Record<Confidence, string> = {
   on_track: "On track",
@@ -40,14 +39,19 @@ export function CheckInModal({
   cycle,
   correcting,
   onClose,
+  onSaved,
+  onConflict,
 }: {
   keyResult: KeyResult;
   cycle: Pick<Cycle, "startDate" | "endDate">;
   /** Ledger entry this check-in corrects; its values prefill the form. */
   correcting: CheckInEntry | null;
   onClose: () => void;
+  /** Reload data and announce success; the dialog closes afterwards. */
+  onSaved: (message: string) => Promise<void> | void;
+  /** Reload data after a 409 so the next attempt uses the latest version. */
+  onConflict: () => Promise<void> | void;
 }) {
-  const { loadWorkspace, setFeedback } = useWorkspace();
   const binary = keyResult.metricType === "binary";
   const [value, setValue] = useState(String(Number(correcting?.value ?? keyResult.current)));
   const [effectiveDate, setEffectiveDate] = useState(correcting?.effectiveDate ?? defaultEffectiveDate(cycle));
@@ -77,20 +81,16 @@ export function CheckInModal({
       if (!result.ok) {
         if (result.status === 409) {
           setError(CONFLICT_MESSAGE);
-          await loadWorkspace();
+          await onConflict();
         } else {
           setError(result.data.error ?? "The check-in could not be saved.");
         }
         return;
       }
-      await loadWorkspace();
       const effective = (result.data.checkIn as { isCurrentEffective?: boolean } | undefined)?.isCurrentEffective;
-      setFeedback({
-        tone: "success",
-        message: effective === false
-          ? "Check-in saved to history. A newer check-in still sets the current value."
-          : correcting ? "Correction saved." : "Check-in saved.",
-      });
+      await onSaved(effective === false
+        ? "Check-in saved to history. A newer check-in still sets the current value."
+        : correcting ? "Correction saved." : "Check-in saved.");
       onClose();
     } finally {
       setSaving(false);

@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { AppShell } from "@/components/okr/app-shell";
-import { CheckInModal, type CheckInDraft } from "@/components/okr/check-in-modal";
+import { CheckInModal } from "@/components/okr/check-in-modal";
 import { DashboardOverview } from "@/components/okr/dashboard-overview";
 import { PeopleSection } from "@/components/okr/people-section";
 import { PeriodComparisonSection } from "@/components/okr/period-comparison";
@@ -81,7 +81,6 @@ export function OkrDashboard() {
   const [reopenReason, setReopenReason] = useState("");
   const [search, setSearch] = useState("");
   const [checkInKrId, setCheckInKrId] = useState<string | null>(null);
-  const [checkInDrafts, setCheckInDrafts] = useState<Record<string, CheckInDraft>>({});
   const [teamCount, setTeamCount] = useState<number | null>(null);
 
   const loadWorkspace = useCallback(async () => {
@@ -254,43 +253,8 @@ export function OkrDashboard() {
     setKrTitle("");
   }
 
-  async function updateKeyResult(keyResult: KeyResult) {
-    const draft = checkInDrafts[keyResult.id];
-    if (!draft) return;
-    const saved = await send(
-      `/api/key-results/${keyResult.id}`,
-      "PATCH",
-      { current: Number(draft.current), version: keyResult.version },
-      "Key result updated.",
-    );
-    if (saved) {
-      const entry = `${draft.effectiveDate || today} · value ${metricValue(draft.current)} · ${draft.confidence.replace("_", " ")}`;
-      setCheckInDrafts((previous) => ({
-        ...previous,
-        [keyResult.id]: { ...draft, timeline: [entry, ...draft.timeline] },
-      }));
-      setCheckInKrId(null);
-    }
-  }
-
   function openCheckIn(keyResult: KeyResult) {
     setCheckInKrId(keyResult.id);
-    setCheckInDrafts((previous) => ({
-      ...previous,
-      [keyResult.id]: previous[keyResult.id] ?? {
-        current: String(Number(keyResult.current)),
-        effectiveDate: today,
-        confidence: "on_track",
-        note: "",
-        blockers: "",
-        correctsPrevious: false,
-        timeline: [],
-      },
-    }));
-  }
-
-  function updateCheckInDraft(keyResultId: string, draft: CheckInDraft) {
-    setCheckInDrafts((previous) => ({ ...previous, [keyResultId]: draft }));
   }
 
   async function simulateConflict(objective: Objective) {
@@ -344,7 +308,6 @@ export function OkrDashboard() {
   const selectedCheckInKr = selectedCycle?.objectives
     .flatMap((objective) => objective.keyResults)
     .find((keyResult) => keyResult.id === checkInKrId);
-  const selectedCheckInDraft = selectedCheckInKr ? checkInDrafts[selectedCheckInKr.id] : undefined;
 
   return (
     <AppShell workspace={workspace} unreadCount={workspace.audit.length} onSignOut={logout} peopleView={peopleView && canManage}>
@@ -723,14 +686,17 @@ export function OkrDashboard() {
         </Card>
       </section>
 
-      {selectedCheckInKr && selectedCheckInDraft && (
+      {selectedCheckInKr && selectedCycle && (
         <CheckInModal
           keyResult={selectedCheckInKr}
-          draft={selectedCheckInDraft}
-          busy={busy}
+          cycle={selectedCycle}
+          correcting={null}
           onClose={() => setCheckInKrId(null)}
-          onChange={(draft) => updateCheckInDraft(selectedCheckInKr.id, draft)}
-          onSubmit={() => updateKeyResult(selectedCheckInKr)}
+          onSaved={async (message) => {
+            await loadWorkspace();
+            setFeedback({ tone: "success", message });
+          }}
+          onConflict={loadWorkspace}
         />
       )}
       </>}

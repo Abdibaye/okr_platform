@@ -48,7 +48,6 @@ import { useWorkspace } from "@/components/okr/workspace-context";
 import type { CheckInEntry, GoalStatus, KeyResult, Objective } from "@/app/types";
 import { cn } from "@/lib/utils";
 
-const today = new Date().toISOString().slice(0, 10);
 const ALL = "all";
 
 type GoalTab = "mine" | "reports" | "team" | "company";
@@ -78,7 +77,7 @@ function ProgressCell({ value, label }: { value: number | null; label: string })
 }
 
 export default function GoalsPage() {
-  const { workspace, selectedCycle, setSelectedCycleId, busy, send, exportCycle } = useWorkspace();
+  const { workspace, selectedCycle, setSelectedCycleId, busy, send, exportCycle, loadWorkspace, setFeedback } = useWorkspace();
   const [tab, setTab] = useState<GoalTab>("mine");
   const [ownerFilter, setOwnerFilter] = useState(ALL);
   const [statusFilter, setStatusFilter] = useState(ALL);
@@ -592,6 +591,11 @@ export default function GoalsPage() {
           cycle={selectedCycle}
           correcting={checkIn.correcting}
           onClose={() => setCheckIn(null)}
+          onSaved={async (message) => {
+            await loadWorkspace();
+            setFeedback({ tone: "success", message });
+          }}
+          onConflict={loadWorkspace}
         />
       )}
     </div>
