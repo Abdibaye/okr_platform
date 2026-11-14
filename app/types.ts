@@ -130,8 +130,31 @@ export interface KeyResult {
   dueDate: string | null;
   editorIds: string[];
   canCheckIn: boolean;
+  confidence: Confidence;
+  lastEffectiveDate: string | null;
+  lastCheckInAt: string | null;
   updatedAt: string;
   version: number;
+}
+
+export type Confidence = "on_track" | "at_risk" | "off_track";
+
+/** One immutable entry in a key result's check-in ledger, as returned by GET /api/key-results/[id]/check-ins. */
+export interface CheckInEntry {
+  id: string;
+  authorId: string;
+  authorName: string;
+  effectiveDate: string;
+  value: string;
+  progress: string;
+  confidence: Confidence;
+  note: string;
+  blockers: string;
+  correctsCheckInId: string | null;
+  supersededById: string | null;
+  isSuperseded: boolean;
+  isCurrentEffective: boolean;
+  createdAt: string;
 }
 
 export interface AuditLog {

@@ -3,10 +3,10 @@ import { NextResponse } from "next/server";
 import { contextOr401, errorResponse, isResponse, isUuid, readJson } from "@/server/api-utils";
 import { getDb } from "@/server/db";
 import { calculateProgress } from "@/server/okr-math";
-import { refreshObjectiveProgress } from "@/server/okr-mutations";
+import { refreshObjectiveProgress, todayWithinCycle } from "@/server/okr-mutations";
 import { recordAudit } from "@/server/people";
 import { hasRole } from "@/server/request-context";
-import { keyResultEditors, keyResults, objectiveAccess, objectives, okrCycles } from "@/server/schema";
+import { keyResultEditors, keyResults, krCheckIns, objectiveAccess, objectives, okrCycles } from "@/server/schema";
 
 const MAX_GOALS = 500;
 
@@ -110,6 +110,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       }));
       if (accessRows.length) await transaction.insert(objectiveAccess).values(accessRows);
 
+      const carriedEffectiveDate = todayWithinCycle(target);
       for (const kr of krs) {
         // "keep" carries baseline, target and the measured value; "current_as_baseline" restarts from today's value.
         // A key result that already hit its target keeps its original baseline (its current value cannot be a new start).
@@ -138,7 +139,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           current: String(current),
           progress: progress.toFixed(2),
           ownerId: kr.ownerId,
+          confidence: kr.confidence,
+          lastEffectiveDate: carriedEffectiveDate,
+          lastCheckInAt: new Date(),
         }).returning({ id: keyResults.id });
+        await transaction.insert(krCheckIns).values({
+          companyId: context.companyId,
+          cycleId: targetCycleId,
+          objectiveId: cloneIdBySource.get(kr.objectiveId)!,
+          keyResultId: clone.id,
+          authorId: actorId,
+          effectiveDate: carriedEffectiveDate,
+          value: String(current),
+          progress: progress.toFixed(2),
+          confidence: kr.confidence,
+          note: `Initial value (carried forward from ${source.name})`,
+        });
         const editors = krEditors.filter((row) => row.keyResultId === kr.id);
         if (editors.length) {
           await transaction.insert(keyResultEditors).values(editors.map((row) => ({ companyId: context.companyId, keyResultId: clone.id, userId: row.userId })));

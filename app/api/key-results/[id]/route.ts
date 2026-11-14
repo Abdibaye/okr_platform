@@ -4,7 +4,7 @@ import { contextOr401, errorResponse, isResponse, isUuid, readJson } from "@/ser
 import { getDb } from "@/server/db";
 import { keyResultEditors, keyResults, krCheckIns, objectives, okrCycles } from "@/server/schema";
 import { calculateProgress } from "@/server/okr-math";
-import { refreshObjectiveProgress } from "@/server/okr-mutations";
+import { recomputeKeyResultFromCheckIns, refreshObjectiveProgress, todayWithinCycle } from "@/server/okr-mutations";
 import {
   assertActiveMembers,
   canEditObjective,
@@ -40,7 +40,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const checkInOnly = !archiving && changedKeys.every((key) => key === "current");
 
     const result = await getDb().transaction(async (transaction) => {
-      const [row] = await transaction.select({ keyResult: keyResults, objective: objectives, cycleStatus: okrCycles.status })
+      const [row] = await transaction.select({ keyResult: keyResults, objective: objectives, cycleStatus: okrCycles.status, cycleStartDate: okrCycles.startDate, cycleEndDate: okrCycles.endDate })
         .from(keyResults)
         .innerJoin(objectives, and(eq(objectives.id, keyResults.objectiveId), eq(objectives.companyId, context.companyId)))
         .innerJoin(okrCycles, eq(okrCycles.id, objectives.cycleId))
@@ -114,36 +114,36 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           throw new InputError(error instanceof Error ? error.message : "Invalid key result values.");
         }
       }
-      // A new baseline/target re-scores past check-ins so the history matches the current definition.
-      const scaleChanged = ["baseline", "target", "direction", "metricType"].some((key) => key in input);
-      const checkInProgress: { id: string; progress: number }[] = [];
-      if (scaleChanged) {
-        const history = await transaction.select({ id: krCheckIns.id, value: krCheckIns.value }).from(krCheckIns)
-          .where(and(eq(krCheckIns.keyResultId, id), eq(krCheckIns.companyId, context.companyId)));
-        for (const checkIn of history) {
-          try {
-            checkInProgress.push({ id: checkIn.id, progress: calculateProgress(next.baseline, next.target, Number(checkIn.value), next.direction, next.metricType) });
-          } catch {
-            throw new InputError("Earlier check-ins do not fit these metric values (for example, a yes/no metric must use 0 or 1).");
-          }
-        }
-      }
 
+      // `current` and `progress` are never written directly: a new value is appended to the check-in ledger,
+      // and any metric change re-derives them from the winning check-in (which also bumps the version).
       const { editorIds, baseline, target, current, ...fields } = input;
-      const [updated] = await transaction.update(keyResults).set({
+      let [updated] = await transaction.update(keyResults).set({
         ...fields,
         ...(baseline !== undefined ? { baseline: baseline.toString() } : {}),
         ...(target !== undefined ? { target: target.toString() } : {}),
-        ...(current !== undefined ? { current: current.toString() } : {}),
-        ...(progress !== undefined ? { progress: progress.toFixed(2) } : {}),
-        version: keyResult.version + 1,
+        ...(metricChanged ? {} : { version: keyResult.version + 1 }),
         updatedAt: new Date(),
       }).where(eq(keyResults.id, id)).returning();
       if (editorIds) await replaceKeyResultEditors(transaction, context.companyId, id, editorIds);
-      for (const checkIn of checkInProgress) {
-        await transaction.update(krCheckIns).set({ progress: checkIn.progress.toFixed(2) }).where(eq(krCheckIns.id, checkIn.id));
+      if (current !== undefined) {
+        await transaction.insert(krCheckIns).values({
+          companyId: context.companyId,
+          cycleId: objective.cycleId,
+          objectiveId: objective.id,
+          keyResultId: id,
+          authorId: actorId,
+          effectiveDate: todayWithinCycle({ startDate: row.cycleStartDate, endDate: row.cycleEndDate }),
+          value: current.toString(),
+          progress: progress!.toFixed(2),
+          confidence: keyResult.confidence,
+          note: "Updated from the key result form",
+        });
       }
-      if (progress !== undefined) await refreshObjectiveProgress(transaction, objective.id, context.companyId);
+      if (metricChanged) {
+        updated = (await recomputeKeyResultFromCheckIns(transaction, id, context.companyId)).keyResult;
+        await refreshObjectiveProgress(transaction, objective.id, context.companyId);
+      }
 
       if ((baseline !== undefined && baseline !== Number(keyResult.baseline)) || (target !== undefined && target !== Number(keyResult.target))) {
         await recordAudit(transaction, {
