@@ -8,6 +8,13 @@ Add database/auth/API dependencies only when requested. Use server-side runtime 
 
 When adding persistence, follow the [Drizzle development database setup](.neander/blocks/drizzle/README.md#local-development-database): use local Docker PostgreSQL, an existing development PostgreSQL instance, or optional managed development Neon. The opt-in local Compose file is separate from the production recipe; a bare starter does not start a database.
 
+## Notifications, email and reminders
+
+All are optional server-side variables (declared in `.neander/compose.yaml`). Without an email provider, notifications stay in-app and show "In-app only"; failed emails show "Email failed" with a Retry button.
+
+- `RESEND_API_KEY` + `EMAIL_FROM` (for example `OKR Platform <okr@example.com>`): send email through Resend.
+- `TRANSACTIONAL_EMAIL_WEBHOOK_URL`: alternatively, POST `{from, to, subject, text, html}` JSON to your own email service.
+- `REMINDER_SWEEP_SECRET`: lets a scheduler run the reminder sweep for every company with `curl -X POST -H "Authorization: Bearer $REMINDER_SWEEP_SECRET" https://<app>/api/reminders/sweep` (for example once a day). Admins can also use "Run reminders now" on the Cycles page. Repeated sweeps never create duplicate reminders.
 
 ## Maintenance and verification
 
