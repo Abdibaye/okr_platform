@@ -1,16 +1,30 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CopyPlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { CarryForwardDialog } from "@/components/okr/carry-forward-dialog";
 import { CycleBanner } from "@/components/okr/cycle-banner";
 import { useWorkspace } from "@/components/okr/workspace-context";
+import type { CheckInCadence } from "@/app/types";
 
 const today = new Date().toISOString().slice(0, 10);
+
+const QUARTERS = [
+  { value: "1", label: "Q1 (Jan – Mar)" },
+  { value: "2", label: "Q2 (Apr – Jun)" },
+  { value: "3", label: "Q3 (Jul – Sep)" },
+  { value: "4", label: "Q4 (Oct – Dec)" },
+];
 
 export default function CyclesPage() {
   const {
@@ -25,8 +39,14 @@ export default function CyclesPage() {
   } = useWorkspace();
 
   const [cycleName, setCycleName] = useState("");
+  const [dateMode, setDateMode] = useState<"preset" | "custom">("preset");
+  const [presetYear, setPresetYear] = useState(String(new Date().getFullYear()));
+  const [presetQuarter, setPresetQuarter] = useState(String(Math.floor(new Date().getMonth() / 3) + 1));
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
+  const [requireApproval, setRequireApproval] = useState(false);
+  const [checkInCadence, setCheckInCadence] = useState<CheckInCadence>("weekly");
+  const [carryForwardOpen, setCarryForwardOpen] = useState(false);
   const [reflectionDraft, setReflectionDraft] = useState("");
   const [openReason, setOpenReason] = useState("Cycle review completed");
   const [reopenReason, setReopenReason] = useState("");
@@ -41,7 +61,15 @@ export default function CyclesPage() {
 
   async function createCycle(event: React.FormEvent) {
     event.preventDefault();
-    const created = await send("/api/cycles", "POST", { name: cycleName, startDate, endDate }, "Cycle created as a draft.");
+    const dates = dateMode === "preset"
+      ? { preset: { year: Number(presetYear), quarter: Number(presetQuarter) } }
+      : { startDate, endDate };
+    const created = await send(
+      "/api/cycles",
+      "POST",
+      { name: cycleName.trim() || undefined, ...dates, requireApproval, checkInCadence },
+      "Cycle created as a draft.",
+    );
     if (created?.cycle?.id) {
       setSelectedCycleId(created.cycle.id);
       setCycleName("");
@@ -108,19 +136,76 @@ export default function CyclesPage() {
           </CardHeader>
           <CardContent>
             <form className="grid gap-3" onSubmit={createCycle}>
+              <fieldset className="space-y-2" disabled={busy || !canManage}>
+                <legend className="text-sm font-medium">Dates</legend>
+                <RadioGroup value={dateMode} onValueChange={(value) => setDateMode(value as "preset" | "custom")} className="flex flex-wrap gap-4">
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem id="cycle-mode-preset" value="preset" />
+                    <Label htmlFor="cycle-mode-preset" className="font-normal">Quarter</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem id="cycle-mode-custom" value="custom" />
+                    <Label htmlFor="cycle-mode-custom" className="font-normal">Custom dates</Label>
+                  </div>
+                </RadioGroup>
+              </fieldset>
+              {dateMode === "preset" ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field>
+                    <FieldLabel htmlFor="cycle-year">Year</FieldLabel>
+                    <Input id="cycle-year" type="number" min={2000} max={2100} step={1} value={presetYear} onChange={(event) => setPresetYear(event.target.value)} disabled={busy || !canManage} />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="cycle-quarter">Quarter</FieldLabel>
+                    <Select value={presetQuarter} onValueChange={setPresetQuarter} disabled={busy || !canManage}>
+                      <SelectTrigger id="cycle-quarter" className="w-full"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {QUARTERS.map((quarter) => <SelectItem key={quarter.value} value={quarter.value}>{quarter.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                </div>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field>
+                    <FieldLabel htmlFor="cycle-start">Start</FieldLabel>
+                    <Input id="cycle-start" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} disabled={busy || !canManage} />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="cycle-end">End</FieldLabel>
+                    <Input id="cycle-end" type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} disabled={busy || !canManage} />
+                  </Field>
+                </div>
+              )}
               <Field>
                 <FieldLabel htmlFor="cycle-name">Name</FieldLabel>
-                <Input id="cycle-name" required value={cycleName} onChange={(event) => setCycleName(event.target.value)} disabled={busy || !canManage} />
+                <Input
+                  id="cycle-name"
+                  required={dateMode === "custom"}
+                  value={cycleName}
+                  placeholder={dateMode === "preset" ? `Q${presetQuarter} ${presetYear}` : undefined}
+                  onChange={(event) => setCycleName(event.target.value)}
+                  disabled={busy || !canManage}
+                />
+                {dateMode === "preset" && <FieldDescription>Leave blank to use “Q{presetQuarter} {presetYear}”.</FieldDescription>}
               </Field>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Field>
-                  <FieldLabel htmlFor="cycle-start">Start</FieldLabel>
-                  <Input id="cycle-start" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} disabled={busy || !canManage} />
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="cycle-end">End</FieldLabel>
-                  <Input id="cycle-end" type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} disabled={busy || !canManage} />
-                </Field>
+              <Field>
+                <FieldLabel htmlFor="cycle-cadence">Check-in cadence</FieldLabel>
+                <Select value={checkInCadence} onValueChange={(value) => setCheckInCadence(value as CheckInCadence)} disabled={busy || !canManage}>
+                  <SelectTrigger id="cycle-cadence" className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="biweekly">Every two weeks</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+              <div className="flex items-start justify-between gap-4 rounded-lg border p-3">
+                <div className="space-y-1">
+                  <Label htmlFor="cycle-require-approval">Require goal approval</Label>
+                  <p className="text-xs text-muted-foreground">New goals wait for the owner's manager (or an admin) to approve them.</p>
+                </div>
+                <Switch id="cycle-require-approval" checked={requireApproval} onCheckedChange={setRequireApproval} disabled={busy || !canManage} />
               </div>
               <Button type="submit" disabled={busy || !canManage}>
                 Create draft cycle
@@ -201,7 +286,26 @@ export default function CyclesPage() {
             </Button>
           </CardContent>
         </Card>
+
+        <Card className="shadow-none lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Carry forward</CardTitle>
+            <CardDescription>Copy unfinished goals and their key results from one cycle into a draft or open cycle.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              variant="outline"
+              disabled={busy || !canManage || workspace.cycles.length < 2}
+              title={!canManage ? "Managers and admins can carry goals forward." : workspace.cycles.length < 2 ? "Create a second cycle to carry goals into." : undefined}
+              onClick={() => setCarryForwardOpen(true)}
+            >
+              <CopyPlus aria-hidden="true" /> Carry forward goals
+            </Button>
+          </CardContent>
+        </Card>
       </div>
+
+      {carryForwardOpen && <CarryForwardDialog defaultSourceId={selectedCycle?.id ?? ""} onClose={() => setCarryForwardOpen(false)} />}
     </div>
   );
 }
