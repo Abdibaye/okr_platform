@@ -33,6 +33,26 @@ x-neander:
       source: generated
       provider: null
       generator: opaque-random
+    - service: web
+      name: REMINDER_SWEEP_SECRET
+      required: false
+      source: user
+      provider: null
+    - service: web
+      name: RESEND_API_KEY
+      required: false
+      source: user
+      provider: null
+    - service: web
+      name: EMAIL_FROM
+      required: false
+      source: user
+      provider: null
+    - service: web
+      name: TRANSACTIONAL_EMAIL_WEBHOOK_URL
+      required: false
+      source: user
+      provider: null
   probes:
     - path: /api/health
       success_status_range: 2xx
