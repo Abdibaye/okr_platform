@@ -158,3 +158,53 @@ export function buildPeriodComparisons(cycles: CycleMetricInput[]) {
   }
   return { summaries, comparisons };
 }
+
+export interface CheckInOrderFacts {
+  id: string;
+  effectiveDate: string;
+  createdAt: Date | string;
+  correctsCheckInId: string | null;
+}
+
+/** IDs of check-ins that a later correction points at; they stay in history but never count. */
+function supersededIds(checkIns: readonly CheckInOrderFacts[]) {
+  return new Set(checkIns.map((checkIn) => checkIn.correctsCheckInId).filter((id): id is string => Boolean(id)));
+}
+
+function createdAtMillis(value: Date | string) {
+  return value instanceof Date ? value.getTime() : Date.parse(value);
+}
+
+/**
+ * Picks the check-in that defines a key result's current value. Check-ins are an append-only ledger, so:
+ * 1. Any check-in referenced by another check-in's `correctsCheckInId` is superseded and excluded.
+ * 2. The rest are ordered by effectiveDate DESC, then createdAt DESC, then id DESC (a deterministic last resort).
+ * 3. The first one wins. A backdated entry therefore stays in history without overriding a newer effective date.
+ * Returns null when there is no eligible check-in.
+ */
+export function selectEffectiveCheckIn<T extends CheckInOrderFacts>(checkIns: readonly T[]): T | null {
+  const superseded = supersededIds(checkIns);
+  let winner: T | null = null;
+  for (const checkIn of checkIns) {
+    if (superseded.has(checkIn.id)) continue;
+    if (!winner || compareCheckInsNewestFirst(checkIn, winner) < 0) winner = checkIn;
+  }
+  return winner;
+}
+
+/** Sort comparator matching the tie-break order (newest effective entry first). */
+export function compareCheckInsNewestFirst(a: CheckInOrderFacts, b: CheckInOrderFacts) {
+  if (a.effectiveDate !== b.effectiveDate) return a.effectiveDate < b.effectiveDate ? 1 : -1;
+  const created = createdAtMillis(b.createdAt) - createdAtMillis(a.createdAt);
+  if (created !== 0) return created;
+  if (a.id === b.id) return 0;
+  return a.id < b.id ? 1 : -1;
+}
+
+export function isSuperseded(checkIn: CheckInOrderFacts, checkIns: readonly CheckInOrderFacts[]) {
+  return checkIns.some((other) => other.correctsCheckInId === checkIn.id);
+}
+
+export function isCurrentEffective(checkIn: CheckInOrderFacts, checkIns: readonly CheckInOrderFacts[]) {
+  return selectEffectiveCheckIn(checkIns)?.id === checkIn.id;
+}

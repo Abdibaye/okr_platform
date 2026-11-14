@@ -3,7 +3,11 @@ import assert from "node:assert/strict";
 import {
   averageProgress,
   calculateProgress,
+  compareCheckInsNewestFirst,
+  isCurrentEffective,
+  isSuperseded,
   quarterlyPresetDates,
+  selectEffectiveCheckIn,
   summarizeCycle,
   wouldCreateAlignmentLoop,
 } from "../server/okr-math.ts";
@@ -84,6 +88,52 @@ check("quarterly presets", () => {
   assert.deepEqual(quarterlyPresetDates(2026, 3), { name: "Q3 2026", startDate: "2026-07-01", endDate: "2026-09-30" });
   assert.deepEqual(quarterlyPresetDates(2026, 4), { name: "Q4 2026", startDate: "2026-10-01", endDate: "2026-12-31" });
   assert.throws(() => quarterlyPresetDates(2026, 5), /Quarter/);
+});
+
+
+check("check-ins: same effective date, later createdAt wins", () => {
+  const entries = [
+    { id: "a", effectiveDate: "2026-04-12", createdAt: "2026-04-12T09:00:00Z", correctsCheckInId: null },
+    { id: "b", effectiveDate: "2026-04-12", createdAt: "2026-04-12T10:00:00Z", correctsCheckInId: null },
+  ];
+  assert.equal(selectEffectiveCheckIn(entries)?.id, "b");
+  assert.equal(isCurrentEffective(entries[1], entries), true);
+  assert.equal(isCurrentEffective(entries[0], entries), false);
+});
+
+check("check-ins: same createdAt, higher id wins", () => {
+  const at = new Date("2026-04-12T10:00:00Z");
+  const entries = [
+    { id: "0000-b", effectiveDate: "2026-04-12", createdAt: at, correctsCheckInId: null },
+    { id: "0000-c", effectiveDate: "2026-04-12", createdAt: at, correctsCheckInId: null },
+    { id: "0000-a", effectiveDate: "2026-04-12", createdAt: at, correctsCheckInId: null },
+  ];
+  assert.equal(selectEffectiveCheckIn(entries)?.id, "0000-c");
+});
+
+check("check-ins: backdated entry does not override a newer one", () => {
+  const entries = [
+    { id: "newer", effectiveDate: "2026-04-12", createdAt: "2026-04-12T10:00:00Z", correctsCheckInId: null },
+    { id: "backdated", effectiveDate: "2026-04-05", createdAt: "2026-04-13T08:00:00Z", correctsCheckInId: null },
+  ];
+  assert.equal(selectEffectiveCheckIn(entries)?.id, "newer");
+  assert.equal(isSuperseded(entries[1], entries), false, "backdated entry stays in history, not superseded");
+  const sorted = [...entries].sort(compareCheckInsNewestFirst).map((entry) => entry.id);
+  assert.deepEqual(sorted, ["newer", "backdated"]);
+});
+
+check("check-ins: a correction supersedes its target", () => {
+  const entries = [
+    { id: "initial", effectiveDate: "2026-04-01", createdAt: "2026-04-01T09:00:00Z", correctsCheckInId: null },
+    { id: "typo", effectiveDate: "2026-04-12", createdAt: "2026-04-12T09:00:00Z", correctsCheckInId: null },
+    { id: "fix", effectiveDate: "2026-04-10", createdAt: "2026-04-12T09:05:00Z", correctsCheckInId: "typo" },
+  ];
+  assert.equal(selectEffectiveCheckIn(entries)?.id, "fix", "older-dated correction still replaces the entry it corrects");
+  assert.equal(isSuperseded(entries[1], entries), true);
+  assert.equal(isCurrentEffective(entries[1], entries), false);
+  assert.equal(isSuperseded(entries[2], entries), false);
+  assert.equal(selectEffectiveCheckIn([]), null);
+  assert.equal(selectEffectiveCheckIn([{ ...entries[1], correctsCheckInId: "typo" }]), null, "an entry pointing at itself never wins");
 });
 
 console.log(`\n${passed} checks passed`);

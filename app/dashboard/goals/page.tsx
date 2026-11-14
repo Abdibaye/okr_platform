@@ -10,6 +10,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Download,
+  History,
   List,
   MessageSquareWarning,
   MoreHorizontal,
@@ -37,13 +38,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckInModal, type CheckInDraft } from "@/components/okr/check-in-modal";
+import { CheckInModal } from "@/components/okr/check-in-modal";
 import { ApprovalBadge, GoalSheet, PersonCell } from "@/components/okr/goal-sheet";
 import { formatDate, levelIcons, levelLabels, progressTone, statusLabels } from "@/components/okr/goal-utils";
 import { KeyResultDialog } from "@/components/okr/key-result-dialog";
+import { KeyResultHistoryDialog } from "@/components/okr/key-result-history-dialog";
 import { Progress } from "@/components/okr/progress";
 import { useWorkspace } from "@/components/okr/workspace-context";
-import type { GoalStatus, KeyResult, Objective } from "@/app/types";
+import type { CheckInEntry, GoalStatus, KeyResult, Objective } from "@/app/types";
 import { cn } from "@/lib/utils";
 
 const today = new Date().toISOString().slice(0, 10);
@@ -90,8 +92,8 @@ export default function GoalsPage() {
   const [reviewTarget, setReviewTarget] = useState<Objective | null>(null);
   const [reviewNote, setReviewNote] = useState("");
   const [archiveTarget, setArchiveTarget] = useState<Objective | null>(null);
-  const [checkInKrId, setCheckInKrId] = useState<string | null>(null);
-  const [checkInDrafts, setCheckInDrafts] = useState<Record<string, CheckInDraft>>({});
+  const [checkIn, setCheckIn] = useState<{ keyResultId: string; correcting: CheckInEntry | null } | null>(null);
+  const [historyKrId, setHistoryKrId] = useState<string | null>(null);
   const [deepLinkHandled, setDeepLinkHandled] = useState(false);
 
   const cycles = useMemo(
@@ -111,6 +113,8 @@ export default function GoalsPage() {
   }, [cycleObjectives]);
   const memberById = useMemo(() => new Map((workspace?.members ?? []).map((member) => [member.id, member])), [workspace?.members]);
   const cycleClosed = selectedCycle?.status === "closed";
+  // Check-ins need an open cycle (drafts aren't tracked yet, closed cycles are locked).
+  const checkInOpen = selectedCycle?.status === "open";
 
   // Notification links point at /dashboard/goals?goal=<id>; open that goal once the workspace has loaded.
   useEffect(() => {
@@ -165,8 +169,9 @@ export default function GoalsPage() {
   const currentPage = Math.min(page, pageCount);
   const pageRows = topLevel.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
-  const selectedCheckInKr = cycleObjectives.flatMap((objective) => objective.keyResults).find((keyResult) => keyResult.id === checkInKrId);
-  const selectedCheckInDraft = selectedCheckInKr ? checkInDrafts[selectedCheckInKr.id] : undefined;
+  const cycleKeyResults = cycleObjectives.flatMap((objective) => objective.keyResults);
+  const checkInKr = checkIn ? cycleKeyResults.find((keyResult) => keyResult.id === checkIn.keyResultId) : undefined;
+  const historyKr = historyKrId ? cycleKeyResults.find((keyResult) => keyResult.id === historyKrId) : undefined;
 
   // Re-resolve dialog targets from the latest workspace so versions stay fresh after reloads.
   const sheetObjective = sheet?.objective ? objectiveById.get(sheet.objective.id) ?? null : null;
@@ -182,31 +187,8 @@ export default function GoalsPage() {
     });
   }
 
-  function openCheckIn(keyResult: KeyResult) {
-    setCheckInKrId(keyResult.id);
-    setCheckInDrafts((previous) => ({
-      ...previous,
-      [keyResult.id]: previous[keyResult.id] ?? {
-        current: String(Number(keyResult.current)),
-        effectiveDate: today,
-        confidence: "on_track",
-        note: "",
-        blockers: "",
-        correctsPrevious: false,
-        timeline: [],
-      },
-    }));
-  }
-
-  async function submitCheckIn(keyResult: KeyResult) {
-    const draft = checkInDrafts[keyResult.id];
-    if (!draft) return;
-    const saved = await send(`/api/key-results/${keyResult.id}`, "PATCH", { current: Number(draft.current), version: keyResult.version }, "Key result updated.");
-    if (saved) {
-      const entry = `${draft.effectiveDate || today} · value ${metricValue(draft.current)} · ${draft.confidence.replace("_", " ")}`;
-      setCheckInDrafts((previous) => ({ ...previous, [keyResult.id]: { ...draft, timeline: [entry, ...draft.timeline] } }));
-      setCheckInKrId(null);
-    }
+  function openCheckIn(keyResult: KeyResult, correcting: CheckInEntry | null = null) {
+    setCheckIn({ keyResultId: keyResult.id, correcting });
   }
 
   async function approval(objective: Objective, action: "submit" | "approve" | "request_changes", note = "") {
@@ -304,8 +286,11 @@ export default function GoalsPage() {
               <Button variant="ghost" size="icon-sm" aria-label={`Actions for key result ${keyResult.title}`}><MoreHorizontal /></Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem disabled={!writable || !keyResult.canCheckIn} onSelect={() => openCheckIn(keyResult)}>
+              <DropdownMenuItem disabled={!checkInOpen || !keyResult.canCheckIn} onSelect={() => openCheckIn(keyResult)}>
                 <CheckCircle2 /> Check in
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setHistoryKrId(keyResult.id)}>
+                <History /> History
               </DropdownMenuItem>
               <DropdownMenuItem disabled={!writable || !objective.canEdit} onSelect={() => setKrDialog({ objective, keyResult })}>
                 <Pencil /> Edit key result
@@ -591,14 +576,22 @@ export default function GoalsPage() {
         </DialogContent>
       </Dialog>
 
-      {selectedCheckInKr && selectedCheckInDraft && (
+      {historyKr && (
+        <KeyResultHistoryDialog
+          keyResult={historyKr}
+          canCorrect={checkInOpen && historyKr.canCheckIn}
+          onCorrect={(entry) => openCheckIn(historyKr, entry)}
+          onClose={() => setHistoryKrId(null)}
+        />
+      )}
+
+      {checkInKr && selectedCycle && checkIn && (
         <CheckInModal
-          keyResult={selectedCheckInKr}
-          draft={selectedCheckInDraft}
-          busy={busy}
-          onClose={() => setCheckInKrId(null)}
-          onChange={(draft) => setCheckInDrafts((previous) => ({ ...previous, [selectedCheckInKr.id]: draft }))}
-          onSubmit={() => submitCheckIn(selectedCheckInKr)}
+          key={`${checkInKr.id}-${checkIn.correcting?.id ?? "new"}`}
+          keyResult={checkInKr}
+          cycle={selectedCycle}
+          correcting={checkIn.correcting}
+          onClose={() => setCheckIn(null)}
         />
       )}
     </div>
