@@ -134,7 +134,11 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function logout() {
-    await fetch("/api/auth/sign-out", { method: "POST" });
+    await fetch("/api/auth/sign-out", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    }).catch(() => null);
     window.location.href = "/";
   }
 

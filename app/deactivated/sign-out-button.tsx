@@ -12,7 +12,11 @@ export function SignOutButton({ redirectTo = "/", label = "Sign out", variant = 
 
   async function signOut() {
     setBusy(true);
-    await fetch("/api/auth/sign-out", { method: "POST" }).catch(() => null);
+    await fetch("/api/auth/sign-out", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    }).catch(() => null);
     window.location.href = redirectTo;
   }
 
