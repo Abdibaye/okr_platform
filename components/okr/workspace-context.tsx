@@ -134,12 +134,24 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function logout() {
-    await fetch("/api/auth/sign-out", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: "{}",
-    }).catch(() => null);
-    window.location.href = "/";
+    setBusy(true);
+    setFeedback(null);
+    try {
+      const response = await fetch("/api/auth/sign-out", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      if (!response.ok) {
+        setFeedback({ tone: "error", message: "Signing out failed - please try again" });
+        return;
+      }
+      window.location.href = "/";
+    } catch {
+      setFeedback({ tone: "error", message: "Signing out failed - please try again" });
+    } finally {
+      setBusy(false);
+    }
   }
 
   const canManage = workspace?.company.role === "admin" || workspace?.company.role === "manager";
