@@ -5,6 +5,7 @@ import { BellRing, CopyPlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,6 +53,7 @@ export default function CyclesPage() {
   const [reflectionDraft, setReflectionDraft] = useState("");
   const [openReason, setOpenReason] = useState("Cycle review completed");
   const [reopenReason, setReopenReason] = useState("");
+  const [restoreCycleId, setRestoreCycleId] = useState<string | null>(null);
 
   useEffect(() => {
     if (selectedCycle) {
@@ -112,6 +114,17 @@ export default function CyclesPage() {
       "Cycle reopened.",
     );
     if (reopened) setReopenReason("");
+  }
+
+  async function archiveCycle() {
+    if (!selectedCycle) return;
+    await send(`/api/cycles/${selectedCycle.id}/archive`, "POST", undefined, "Cycle archived.");
+  }
+
+  async function confirmCycleRestore() {
+    if (!restoreCycleId) return;
+    const done = await send(`/api/cycles/${restoreCycleId}/restore`, "POST", undefined, "Cycle restored.");
+    if (done) setRestoreCycleId(null);
   }
 
   async function runReminders() {
@@ -280,6 +293,25 @@ export default function CyclesPage() {
               >
                 Close cycle
               </Button>
+              <Button
+                variant="outline"
+                disabled={busy || !canManage}
+                onClick={archiveCycle}
+              >
+                Archive cycle
+              </Button>
+              {workspace.cycles.some((cycle) => cycle.archivedAt) && (
+                <Button
+                  variant="outline"
+                  disabled={busy || !isAdmin}
+                  onClick={() => setRestoreCycleId(selectedCycle?.id ?? null)}
+                >
+                  Restore archived cycle
+                </Button>
+              )}
+              {isAdmin && (
+                <Button asChild variant="outline"><a href="/api/exports/backup">Download company backup</a></Button>
+              )}
             </div>
             <Field>
               <FieldLabel htmlFor="reopen-reason">Admin reopen reason</FieldLabel>
@@ -342,6 +374,18 @@ export default function CyclesPage() {
       </div>
 
       {carryForwardOpen && <CarryForwardDialog defaultSourceId={selectedCycle?.id ?? ""} onClose={() => setCarryForwardOpen(false)} />}
+      <Dialog open={restoreCycleId !== null} onOpenChange={(open) => { if (!open) setRestoreCycleId(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Restore archived cycle?</DialogTitle>
+            <DialogDescription>Historical goals, key results, check-ins and comments are kept.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRestoreCycleId(null)}>Cancel</Button>
+            <Button disabled={busy} onClick={confirmCycleRestore}>Restore cycle</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

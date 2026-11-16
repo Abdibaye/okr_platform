@@ -15,15 +15,19 @@ export interface ImportRowError {
 }
 
 export interface ImportPlan {
+  cycleId: string;
+  cycleName: string;
   objectiveTitle: string;
   objectiveDescription: string;
   level: "company" | "team" | "individual";
   teamName: string;
+  teamId: string | null;
   ownerId: string;
   ownerEmail: string;
   dueDate: string | null;
   visibility: "company" | "team" | "restricted";
   parentTitle: string | null;
+  parentObjectiveId: string | null;
   krTitle: string;
   metricType: "numeric" | "percentage" | "currency" | "binary";
   direction: "increasing" | "decreasing";
@@ -63,18 +67,20 @@ export async function validateOkrCsv(companyId: string, csv: string): Promise<Ok
   if (errors.length) return { errors, plannedObjectives: 0, plannedKeyResults: 0, plans: [] };
 
   const database = getDb();
-  const [cycleRows, teamRows, memberRows] = await Promise.all([
+  const [cycleRows, teamRows, memberRows, existingObjectiveRows] = await Promise.all([
     database.select().from(okrCycles).where(eq(okrCycles.companyId, companyId)),
     database.select().from(teams).where(eq(teams.companyId, companyId)),
     database.select({ userId: companyMemberships.userId, email: user.email })
       .from(companyMemberships).innerJoin(user, eq(user.id, companyMemberships.userId))
       .where(and(eq(companyMemberships.companyId, companyId), eq(companyMemberships.isActive, true))),
+    database.select({ id: objectives.id, title: objectives.title, parentId: objectives.parentObjectiveId })
+      .from(objectives).where(eq(objectives.companyId, companyId)),
   ]);
   const cycleByName = new Map(cycleRows.map((cycle) => [cycle.name.toLowerCase(), cycle]));
   const teamByName = new Map(teamRows.map((team) => [team.name.toLowerCase(), team]));
   const memberByEmail = new Map(memberRows.map((member) => [member.email.toLowerCase(), member]));
   const plans: ImportPlan[] = [];
-  const objectiveTitles = new Set<string>();
+  const plannedTitles = new Set<string>();
 
   for (let index = 1; index < records.length; index++) {
     const record = records[index];
@@ -93,7 +99,6 @@ export async function validateOkrCsv(companyId: string, csv: string): Promise<Ok
     const team = values.team_name ? teamByName.get(values.team_name.toLowerCase()) : undefined;
     if (values.team_name && !team) rowErrors.push(`Unknown team "${values.team_name}"`);
     if (values.due_date && !/^\d{4}-\d{2}-\d{2}$/.test(values.due_date)) rowErrors.push(`Invalid due date "${values.due_date}"`);
-    if (values.parent_objective_title && !cycleRows.some((candidate) => false)) rowErrors.push("Invalid parent");
     if (!METRIC_TYPES.has(values.metric_type)) rowErrors.push(`Invalid metric type "${values.metric_type}"`);
     if (!DIRECTIONS.has(values.direction)) rowErrors.push(`Invalid direction "${values.direction}"`);
     const baseline = Number(values.baseline);
@@ -110,27 +115,37 @@ export async function validateOkrCsv(companyId: string, csv: string): Promise<Ok
       errors.push(...rowErrors.map((reason) => ({ row: rowNumber, reason })));
       continue;
     }
+    let parentObjectiveId: string | null = null;
     if (values.parent_objective_title) {
-      if (values.parent_objective_title.toLowerCase() === values.objective_title.toLowerCase()) rowErrors.push("Goal cannot align to itself");
+      if (values.parent_objective_title.toLowerCase() === values.objective_title.toLowerCase()) {
+        rowErrors.push("Goal cannot align to itself");
+      } else if (plannedTitles.has(values.parent_objective_title.toLowerCase())) {
+        rowErrors.push("Parent goal must already exist before it can be referenced");
+      } else {
+        const parent = existingObjectiveRows.find((row) => row.title.toLowerCase() === values.parent_objective_title.toLowerCase());
+        if (!parent) rowErrors.push(`Parent objective "${values.parent_objective_title}" does not exist`);
+        else parentObjectiveId = parent.id;
+      }
     }
-    const existingParent = values.parent_objective_title
-      ? await database.select({ id: objectives.id }).from(objectives).where(and(eq(objectives.companyId, companyId), eq(objectives.title, values.parent_objective_title))).limit(1)
-      : [];
-    if (values.parent_objective_title && !existingParent.length && !objectiveTitles.has(values.parent_objective_title.toLowerCase())) {
-      errors.push({ row: rowNumber, reason: `Parent objective "${values.parent_objective_title}" must appear earlier in the CSV or already exist` });
+    if (rowErrors.length) {
+      errors.push(...rowErrors.map((reason) => ({ row: rowNumber, reason })));
       continue;
     }
-    objectiveTitles.add(values.objective_title.toLowerCase());
+    plannedTitles.add(values.objective_title.toLowerCase());
     plans.push({
+      cycleId: cycle!.id,
+      cycleName: cycle!.name,
       objectiveTitle: values.objective_title,
       objectiveDescription: values.objective_description,
       level: values.level as ImportPlan["level"],
       teamName: values.team_name,
+      teamId: team?.id ?? null,
       ownerId: owner!.userId,
       ownerEmail: values.owner_email,
       dueDate: values.due_date || null,
       visibility: values.visibility as ImportPlan["visibility"],
       parentTitle: values.parent_objective_title || null,
+      parentObjectiveId,
       krTitle: values.kr_title,
       metricType: values.metric_type as ImportPlan["metricType"],
       direction: values.direction as ImportPlan["direction"],

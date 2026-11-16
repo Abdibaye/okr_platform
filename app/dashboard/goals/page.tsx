@@ -40,6 +40,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { CheckInModal } from "@/components/okr/check-in-modal";
+import { ImportExportPanel } from "@/components/okr/import-export-panel";
 import { ApprovalBadge, GoalSheet, PersonCell } from "@/components/okr/goal-sheet";
 import { formatDate, levelIcons, levelLabels, progressTone, statusLabels } from "@/components/okr/goal-utils";
 import { KeyResultDialog } from "@/components/okr/key-result-dialog";
@@ -93,6 +94,7 @@ export default function GoalsPage() {
   const [reviewTarget, setReviewTarget] = useState<Objective | null>(null);
   const [reviewNote, setReviewNote] = useState("");
   const [archiveTarget, setArchiveTarget] = useState<Objective | null>(null);
+  const [restoreTarget, setRestoreTarget] = useState<Objective | null>(null);
   const [checkIn, setCheckIn] = useState<{ keyResultId: string; correcting: CheckInEntry | null } | null>(null);
   const [historyKrId, setHistoryKrId] = useState<string | null>(null);
   const [deepLinkHandled, setDeepLinkHandled] = useState(false);
@@ -230,6 +232,12 @@ export default function GoalsPage() {
     if (done) setArchiveTarget(null);
   }
 
+  async function confirmRestore() {
+    if (!restoreTarget) return;
+    const done = await send(`/api/objectives/${restoreTarget.id}/restore`, "POST", undefined, "Goal restored.");
+    if (done) setRestoreTarget(null);
+  }
+
   // Admins and anyone above the owner in the reporting chain can ask them for a check-in (the server re-checks).
   function canRequestCheckIn(ownerId: string | null) {
     const me = workspace?.user.id;
@@ -341,6 +349,9 @@ export default function GoalsPage() {
               <DropdownMenuItem disabled={!writable || !objective.canEdit} onSelect={() => setKrDialog({ objective, keyResult })}>
                 <Pencil /> Edit key result
               </DropdownMenuItem>
+              <DropdownMenuItem disabled={busy || !writable || !objective.canEdit} onSelect={() => void send(`/api/key-results/${keyResult.id}/archive`, "POST", undefined, "Key result archived.")}>
+                <Archive /> Archive key result
+              </DropdownMenuItem>
               {krRequestOwner && (
                 <DropdownMenuItem disabled={busy} onSelect={() => void requestCheckIn({ keyResultId: keyResult.id }, krRequestOwner.name)}>
                   <BellRing /> Request check-in
@@ -441,6 +452,8 @@ export default function GoalsPage() {
           </Button>
         </div>
       </header>
+
+      <ImportExportPanel cycleId={selectedCycle?.id} />
 
       <Tabs value={tab} onValueChange={(value) => setTab(value as GoalTab)}>
         <div className="overflow-x-auto border-b">

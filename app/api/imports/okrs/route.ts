@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { and, eq, inArray, isNull } from "drizzle-orm";
 import { contextOr401, isResponse, readJson } from "@/server/api-utils";
 import { getDb } from "@/server/db";
 import { validateOkrCsv } from "@/server/okr-import";
+import { calculateProgress } from "@/server/okr-math";
 import { refreshObjectiveProgress } from "@/server/okr-mutations";
 import { recordAudit } from "@/server/people";
-import { objectives, keyResults, okrCycles, teams, user } from "@/server/schema";
+import { keyResults, objectives } from "@/server/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -28,39 +28,61 @@ export async function POST(request: Request) {
     }, { status: validation.errors.length ? 400 : 200 });
   }
 
-  const database = getDb();
-  const cycleRows = await database.select().from(okrCycles).where(eq(okrCycles.companyId, context.companyId));
-  const teamRows = await database.select().from(teams).where(eq(teams.companyId, context.companyId));
-  const userRows = await database.select({ id: user.id, email: user.email }).from(user);
-  const cycleByName = new Map(cycleRows.map((cycle) => [cycle.name.toLowerCase(), cycle]));
-  const teamByName = new Map(teamRows.map((team) => [team.name.toLowerCase(), team]));
-  const userByEmail = new Map(userRows.map((member) => [member.email.toLowerCase(), member]));
-  const imported = await database.transaction(async (transaction) => {
+  const result = await getDb().transaction(async (transaction) => {
     const objectiveIdByTitle = new Map<string, string>();
-    for (const plan of validation.plans) {
-      const cycle = cycleByName.get(plan.objectiveDescription.length ? plan.objectiveDescription.toLowerCase() : "");
-      void cycle;
-    }
     const objectivePlans = [...new Map(validation.plans.map((plan) => [plan.objectiveTitle.toLowerCase(), plan])).values()];
     for (const plan of objectivePlans) {
-      const cycle = validation.plans.length ? cycleByName.get(validation.plans[0].objectiveTitle.toLowerCase()) : undefined;
-      void cycle;
+      const [objective] = await transaction.insert(objectives).values({
+        companyId: context.companyId,
+        cycleId: plan.cycleId,
+        title: plan.objectiveTitle,
+        description: plan.objectiveDescription,
+        level: plan.level,
+        teamId: plan.teamId,
+        ownerId: plan.ownerId,
+        dueDate: plan.dueDate,
+        visibility: plan.visibility,
+        parentObjectiveId: plan.parentObjectiveId,
+        createdBy: context.session.user.id,
+      }).returning({ id: objectives.id });
+      objectiveIdByTitle.set(plan.objectiveTitle.toLowerCase(), objective.id);
     }
-    // Real insert block below; temporary placeholders removed before commit.
-    const insertedObjectives: string[] = [];
-    for (const plan of objectivePlans) {
-      const cycle = cycleRows.find((candidate) => candidate.name.toLowerCase() === "TMP-M5-CYCLE-PLACEHOLDER");
-      void cycle;
+
+    for (const plan of validation.plans) {
+      const progress = calculateProgress(plan.baseline, plan.target, plan.current, plan.direction, plan.metricType);
+      await transaction.insert(keyResults).values({
+        companyId: context.companyId,
+        objectiveId: objectiveIdByTitle.get(plan.objectiveTitle.toLowerCase())!,
+        title: plan.krTitle,
+        metricType: plan.metricType,
+        direction: plan.direction,
+        unit: plan.unit,
+        baseline: plan.baseline.toString(),
+        target: plan.target.toString(),
+        current: plan.current.toString(),
+        progress: progress.toFixed(2),
+        ownerId: plan.ownerId,
+      });
     }
+    for (const objectiveId of objectiveIdByTitle.values()) await refreshObjectiveProgress(transaction, objectiveId, context.companyId);
     await recordAudit(transaction, {
       companyId: context.companyId,
       actorId: context.session.user.id,
       action: "okrs_imported",
       entityType: "import",
       entityId: "okr-import",
-      reason: `Imported ${validation.plannedObjectives} objectives and ${validation.plannedKeyResults} key results`,
+      reason: `Imported ${objectivePlans.length} objectives and ${validation.plans.length} key results from CSV`,
+      details: { objectiveCount: objectivePlans.length, keyResultCount: validation.plans.length },
     });
-    return insertedObjectives;
+    return objectiveIdByTitle;
   });
-  return NextResponse.json({ dryRun: false, committed: true, errors: [], plannedObjectives: validation.plannedObjectives, plannedKeyResults: validation.plannedKeyResults, imported });
+
+  return NextResponse.json({
+    dryRun: false,
+    committed: true,
+    errors: [],
+    plannedObjectives: validation.plannedObjectives,
+    plannedKeyResults: validation.plannedKeyResults,
+    objectiveIds: [...result.values()],
+  });
 }

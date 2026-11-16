@@ -83,6 +83,7 @@ export interface Cycle {
   finalReflection: string;
   requireApproval: boolean;
   checkInCadence: CheckInCadence;
+  archivedAt: string | null;
   version: number;
   objectives: Objective[];
 }
