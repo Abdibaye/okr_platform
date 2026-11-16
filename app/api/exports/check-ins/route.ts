@@ -24,7 +24,7 @@ export async function GET(request: Request) {
   const authors = authorIds.length ? await getDb().select({ id: user.id, name: user.name }).from(user)
     .where(inArray(user.id, authorIds)) : [];
   const authorById = new Map(authors.map((author) => [author.id, author.name]));
-  const rows: (string | number | null)[][] = [HEADERS];
+  const rows: (string | number | null)[][] = [[...HEADERS]];
   for (const checkIn of checkIns) {
     const goal = goalById.get(checkIn.objectiveId);
     const keyResult = keyResultById.get(checkIn.keyResultId);

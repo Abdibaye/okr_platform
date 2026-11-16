@@ -21,7 +21,7 @@ export async function GET(request: Request) {
   }
   const data = await loadFilteredGoals(context, filters);
   const objectiveById = new Map(data.goals.map((goal) => [goal.id, goal]));
-  const rows: (string | number | null)[][] = [HEADERS];
+  const rows: (string | number | null)[][] = [[...HEADERS]];
   for (const goal of data.goals) {
     const cycle = data.cycles.find((candidate) => candidate.id === goal.cycleId);
     const parent = goal.parentObjectiveId ? objectiveById.get(goal.parentObjectiveId) : undefined;

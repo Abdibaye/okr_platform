@@ -13,6 +13,13 @@ export interface CsvRecord {
   fields: string[];
 }
 
+/** Quotes CSV fields and neutralizes spreadsheet formulas (=cmd(), +1, -1, @x). */
+export function csvCell(value: string | number | null) {
+  let text = value === null ? "" : String(value);
+  if (/^[=+\-@]/.test(text) && Number.isNaN(Number(text))) text = `'${text}`;
+  return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
 /**
  * RFC 4180 parser: comma separated, double-quoted fields may contain commas, CRLF/LF line breaks
  * and escaped quotes (""). Accepts LF or CRLF record separators and an optional trailing newline.
