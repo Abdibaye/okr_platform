@@ -162,7 +162,7 @@ export function AuthScreen({ initialNotice = null }: { initialNotice?: string | 
               </p>
 
               {/* Action Buttons */}
-              <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <div className="pt-2 flex items-center gap-3">
                 <Button
                   size="lg"
                   className="bg-brand-teal hover:bg-brand-teal/90 text-white font-medium px-6 shadow-sm"
@@ -174,28 +174,6 @@ export function AuthScreen({ initialNotice = null }: { initialNotice?: string | 
                   Sign in to Workspace
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground px-1">One-click:</span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-10 text-xs font-semibold"
-                    onClick={() => quickLogin("admin@demo.test")}
-                    disabled={busy}
-                  >
-                    ⚡ Demo Admin
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-10 text-xs font-semibold"
-                    onClick={() => quickLogin("member@demo.test")}
-                    disabled={busy}
-                  >
-                    👤 Demo Member
-                  </Button>
-                </div>
               </div>
             </div>
 
@@ -211,7 +189,7 @@ export function AuthScreen({ initialNotice = null }: { initialNotice?: string | 
                   </div>
                   <div className="flex items-center gap-2 rounded-md bg-background/80 px-3 py-1 text-[11px] font-mono text-muted-foreground border border-border/60">
                     <Lock className="h-3 w-3 text-emerald-600" />
-                    <span>app.betterworks-okr.internal/dashboard</span>
+                    <span>app.okr-platform.internal/dashboard</span>
                   </div>
                   <div className="w-10" />
                 </div>
@@ -220,7 +198,7 @@ export function AuthScreen({ initialNotice = null }: { initialNotice?: string | 
                 <div className="relative bg-muted/20">
                   <Image
                     src="/okrhome.png"
-                    alt="Betterworks OKR Workspace Dashboard"
+                    alt="OKR Workspace Dashboard"
                     width={3016}
                     height={1720}
                     priority
