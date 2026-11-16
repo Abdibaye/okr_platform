@@ -4,12 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import {
   ArrowRight,
-  Clock,
-  GitBranch,
   Lock,
-  ShieldCheck,
-  Sparkles,
-  Target,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -120,22 +115,7 @@ export function AuthScreen({ initialNotice = null }: { initialNotice?: string | 
     <div className="min-h-screen bg-background text-foreground flex flex-col justify-between selection:bg-brand-teal/20 selection:text-brand-teal-ink">
       {/* Top Navigation */}
       <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/90 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-teal to-brand-indigo text-white shadow-sm">
-              <Target className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-lg tracking-tight">Betterworks OKR</span>
-                <span className="rounded-full bg-brand-teal-soft px-2 py-0.5 text-[10px] font-medium text-brand-teal-ink border border-brand-teal/20">
-                  Enterprise
-                </span>
-              </div>
-              <p className="text-[11px] text-muted-foreground hidden sm:block">Strategy Execution & Alignment Platform</p>
-            </div>
-          </div>
-
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-end px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <Button
               variant="outline"
@@ -168,11 +148,6 @@ export function AuthScreen({ initialNotice = null }: { initialNotice?: string | 
           <div className="grid gap-12 lg:grid-cols-12 lg:items-center">
             {/* Hero Left Column: Copy & Value Proposition */}
             <div className="lg:col-span-5 space-y-6 text-left">
-              <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/60 px-3 py-1 text-xs font-medium text-foreground backdrop-blur-sm">
-                <Sparkles className="h-3.5 w-3.5 text-brand-teal" />
-                <span>Modern Enterprise Goal Architecture</span>
-              </div>
-
               <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-5xl text-foreground leading-[1.12]">
                 Align your entire company on{" "}
                 <span className="bg-gradient-to-r from-brand-teal to-brand-indigo bg-clip-text text-transparent">
@@ -222,22 +197,6 @@ export function AuthScreen({ initialNotice = null }: { initialNotice?: string | 
                   </Button>
                 </div>
               </div>
-
-              {/* Trust Indicators */}
-              <div className="pt-3 grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
-                  <span>Multi-Tenant RBAC</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <GitBranch className="h-4 w-4 text-brand-teal shrink-0" />
-                  <span>Loop-Free Trees</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-indigo-600 shrink-0" />
-                  <span>Immutable Ledger</span>
-                </div>
-              </div>
             </div>
 
             {/* Hero Right Column: okrhome.png Image Showcase */}
@@ -278,10 +237,7 @@ export function AuthScreen({ initialNotice = null }: { initialNotice?: string | 
       <footer className="border-t border-border/80 py-5 text-xs text-muted-foreground bg-background">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <div className="flex h-5 w-5 items-center justify-center rounded bg-brand-teal text-white">
-              <Target className="h-3 w-3" />
-            </div>
-            <span className="font-semibold text-foreground">Betterworks OKR Platform</span>
+            <span className="font-semibold text-foreground">OKR Platform</span>
             <span>· Enterprise Ready</span>
           </div>
 
