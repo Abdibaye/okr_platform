@@ -1,0 +1,721 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { Download, Plus, Search } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import { AppShell } from "@/components/okr/app-shell";
+import { CheckInModal } from "@/components/okr/check-in-modal";
+import { DashboardOverview } from "@/components/okr/dashboard-overview";
+import { PeopleSection } from "@/components/okr/people-section";
+import { PeriodComparisonSection } from "@/components/okr/period-comparison";
+import { Progress, type ProgressTone } from "@/components/okr/progress";
+import type { KeyResult, Objective, Workspace } from "./types";
+
+type Feedback = { tone: "success" | "error"; message: string } | null;
+
+const today = new Date().toISOString().slice(0, 10);
+
+function metricValue(value: string) {
+  return Number(value).toLocaleString();
+}
+
+function formatDate(value: string) {
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
+function csvCell(value: string | number) {
+  const text = String(value);
+  return /[",\n\r]/.test(text) ? `"${text.replaceAll("\"", "\"\"")}"` : text;
+}
+
+function focusField(id: string) {
+  const field = document.getElementById(id);
+  field?.scrollIntoView({ behavior: "smooth", block: "center" });
+  field?.focus({ preventScroll: true });
+}
+
+function progressTone(progress: number): ProgressTone {
+  if (progress >= 70) return "on_track";
+  if (progress >= 40) return "at_risk";
+  return "off_track";
+}
+
+export function OkrDashboard() {
+  const [peopleView, setPeopleView] = useState(false);
+  useEffect(() => {
+    const syncView = () => setPeopleView(window.location.hash === "#team" || window.location.hash === "#people");
+    syncView();
+    window.addEventListener("hashchange", syncView);
+    return () => window.removeEventListener("hashchange", syncView);
+  }, []);
+  const [workspace, setWorkspace] = useState<Workspace | null>(null);
+  const [feedback, setFeedback] = useState<Feedback>(null);
+  const [busy, setBusy] = useState(false);
+  const [cycleName, setCycleName] = useState("");
+  const [startDate, setStartDate] = useState(today);
+  const [endDate, setEndDate] = useState(today);
+  const [selectedCycleId, setSelectedCycleId] = useState("");
+  const [objectiveTitle, setObjectiveTitle] = useState("");
+  const [krObjectiveId, setKrObjectiveId] = useState("");
+  const [krTitle, setKrTitle] = useState("");
+  const [metricType, setMetricType] = useState<KeyResult["metricType"]>("numeric");
+  const [direction, setDirection] = useState<KeyResult["direction"]>("increasing");
+  const [baseline, setBaseline] = useState("0");
+  const [target, setTarget] = useState("100");
+  const [newKrCurrent, setNewKrCurrent] = useState("0");
+  const [editingObjectiveId, setEditingObjectiveId] = useState<string | null>(null);
+  const [objTitleDraft, setObjTitleDraft] = useState("");
+  const [objDescriptionDraft, setObjDescriptionDraft] = useState("");
+  const [reflectionDraft, setReflectionDraft] = useState("");
+  const [openReason, setOpenReason] = useState("Cycle review completed");
+  const [reopenReason, setReopenReason] = useState("");
+  const [search, setSearch] = useState("");
+  const [checkInKrId, setCheckInKrId] = useState<string | null>(null);
+  const [teamCount, setTeamCount] = useState<number | null>(null);
+
+  const loadWorkspace = useCallback(async () => {
+    const response = await fetch("/api/workspace", { cache: "no-store" });
+    if (response.status === 401) {
+      window.location.href = "/?session=expired";
+      return;
+    }
+    if (response.status === 403) {
+      window.location.href = "/deactivated";
+      return;
+    }
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setFeedback({ tone: "error", message: data.error ?? "Could not load the workspace." });
+      return;
+    }
+    const loaded = data as Workspace;
+    setWorkspace(loaded);
+    setSelectedCycleId((currentSelected) => {
+      if (currentSelected && loaded.cycles.some((cycle) => cycle.id === currentSelected)) {
+        return currentSelected;
+      }
+      return loaded.cycles[0]?.id ?? "";
+    });
+  }, []);
+
+  useEffect(() => {
+    void loadWorkspace();
+  }, [loadWorkspace]);
+
+  const workspaceRole = workspace?.company.role;
+  useEffect(() => {
+    if (workspaceRole !== "admin" && workspaceRole !== "manager") return;
+    let cancelled = false;
+    fetch("/api/teams", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (!cancelled && Array.isArray(data?.teams)) setTeamCount(data.teams.length);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceRole]);
+
+  const cycles = workspace?.cycles ?? [];
+  const selectedCycle = cycles.find((cycle) => cycle.id === selectedCycleId);
+  const selectedOpenCycle = selectedCycle?.status === "open" ? selectedCycle : undefined;
+
+  useEffect(() => {
+    if (selectedCycle) {
+      setReflectionDraft(selectedCycle.finalReflection);
+    } else {
+      setReflectionDraft("");
+    }
+  }, [selectedCycle?.id, selectedCycle?.finalReflection]);
+
+  async function send(url: string, method: string, body?: unknown, successMessage = "Saved.") {
+    setBusy(true);
+    setFeedback(null);
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: body ? { "Content-Type": "application/json" } : undefined,
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      if (response.status === 401) {
+        window.location.href = "/?session=expired";
+        return null;
+      }
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setFeedback({ tone: "error", message: `${response.status}: ${data.error ?? "Request failed."}` });
+        if (response.status === 409) {
+          await loadWorkspace();
+        }
+        return null;
+      }
+      setFeedback({ tone: "success", message: successMessage });
+      await loadWorkspace();
+      return data;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function createCycle(event: React.FormEvent) {
+    event.preventDefault();
+    const created = await send("/api/cycles", "POST", { name: cycleName, startDate, endDate }, "Cycle created as a draft.");
+    if (created?.cycle?.id) {
+      setSelectedCycleId(created.cycle.id);
+      setCycleName("");
+    }
+  }
+
+  async function openCycle() {
+    if (!selectedCycle) return;
+    await send("/api/cycles", "PATCH", { id: selectedCycle.id, version: selectedCycle.version }, "Cycle opened.");
+  }
+
+  async function saveReflection() {
+    if (!selectedCycle) return;
+    await send(
+      `/api/cycles/${selectedCycle.id}`,
+      "PATCH",
+      { finalReflection: reflectionDraft, version: selectedCycle.version },
+      "Final reflection saved.",
+    );
+  }
+
+  async function closeCycle() {
+    if (!selectedCycle) return;
+    await send(
+      `/api/cycles/${selectedCycle.id}/close`,
+      "POST",
+      { reason: openReason, finalReflection: reflectionDraft, version: selectedCycle.version },
+      "Cycle closed.",
+    );
+  }
+
+  async function reopenCycle() {
+    if (!selectedCycle) return;
+    const reopened = await send(
+      `/api/cycles/${selectedCycle.id}/reopen`,
+      "POST",
+      { reason: reopenReason, version: selectedCycle.version },
+      "Cycle reopened.",
+    );
+    if (reopened) setReopenReason("");
+  }
+
+  async function createObjective(event: React.FormEvent) {
+    event.preventDefault();
+    if (!selectedCycle) return;
+    const created = await send("/api/objectives", "POST", { cycleId: selectedCycle.id, title: objectiveTitle }, "Objective added.");
+    if (created?.objective?.id) {
+      setKrObjectiveId(created.objective.id);
+      setObjectiveTitle("");
+    }
+  }
+
+  function startEditingObjective(objective: Objective) {
+    setEditingObjectiveId(objective.id);
+    setObjTitleDraft(objective.title);
+    setObjDescriptionDraft(objective.description);
+  }
+
+  async function saveObjective(objective: Objective) {
+    const saved = await send(
+      `/api/objectives/${objective.id}`,
+      "PATCH",
+      { version: objective.version, title: objTitleDraft, description: objDescriptionDraft },
+      "Objective updated.",
+    );
+    if (saved) setEditingObjectiveId(null);
+  }
+
+  async function createKeyResult(event: React.FormEvent) {
+    event.preventDefault();
+    await send("/api/key-results", "POST", {
+      objectiveId: krObjectiveId,
+      title: krTitle,
+      metricType,
+      direction,
+      baseline: Number(baseline),
+      target: Number(target),
+      current: Number(newKrCurrent),
+    }, "Key result added.");
+    setKrTitle("");
+  }
+
+  function openCheckIn(keyResult: KeyResult) {
+    setCheckInKrId(keyResult.id);
+  }
+
+  async function simulateConflict(objective: Objective) {
+    const first = await send(`/api/objectives/${objective.id}`, "PATCH", { version: objective.version, title: `${objective.title} — first edit` }, "First edit saved.");
+    if (!first) return;
+    await send(`/api/objectives/${objective.id}`, "PATCH", { version: objective.version, title: `${objective.title} — stale edit` }, "Conflict shown.");
+  }
+
+  function exportCycle() {
+    if (!selectedCycle) return;
+    const rows = [["Objective", "Objective progress %", "Key result", "Baseline", "Current", "Target", "Unit", "Key result progress %"]];
+    for (const objective of selectedCycle.objectives) {
+      const objectiveProgress = objective.progress === null ? "" : Number(objective.progress).toFixed(1);
+      if (!objective.keyResults.length) rows.push([objective.title, objectiveProgress, "", "", "", "", "", ""]);
+      for (const keyResult of objective.keyResults) {
+        rows.push([objective.title, objectiveProgress, keyResult.title, keyResult.baseline, keyResult.current, keyResult.target, keyResult.unit, Number(keyResult.progress).toFixed(1)]);
+      }
+    }
+    const blob = new Blob([rows.map((row) => row.map(csvCell).join(",")).join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${selectedCycle.name.replace(/[^\w-]+/g, "-") || "cycle"}-okrs.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function logout() {
+    setBusy(true);
+    setFeedback(null);
+    try {
+      const response = await fetch("/api/auth/sign-out", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      if (!response.ok) {
+        setFeedback({ tone: "error", message: "Signing out failed - please try again" });
+        return;
+      }
+      window.location.href = "/";
+    } catch {
+      setFeedback({ tone: "error", message: "Signing out failed - please try again" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!workspace) {
+    return feedback?.tone === "error" ? (
+      <Alert variant="destructive">
+        <AlertTitle>Unable to load workspace</AlertTitle>
+        <AlertDescription>{feedback.message}</AlertDescription>
+      </Alert>
+    ) : (
+      <p className="text-muted-foreground">Loading your workspace…</p>
+    );
+  }
+
+  const canManage = workspace.company.role === "admin" || workspace.company.role === "manager";
+  const isAdmin = workspace.company.role === "admin";
+  const normalizedSearch = search.trim().toLowerCase();
+  const visibleObjectives = selectedCycle?.objectives.filter((objective) =>
+    objective.title.toLowerCase().includes(normalizedSearch) ||
+    objective.keyResults.some((keyResult) => keyResult.title.toLowerCase().includes(normalizedSearch))
+  ) ?? [];
+  const selectedCheckInKr = selectedCycle?.objectives
+    .flatMap((objective) => objective.keyResults)
+    .find((keyResult) => keyResult.id === checkInKrId);
+
+  return (
+    <AppShell workspace={workspace} onSignOut={logout} peopleView={peopleView && canManage}>
+      {peopleView && canManage ? (
+        <section id="team"><PeopleSection role={workspace.company.role} currentUserId={workspace.user.id} /></section>
+      ) : <>
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-3xl lg:text-4xl">Dashboard</h1>
+          <p className="mt-1 truncate text-sm text-muted-foreground">{workspace.company.name} · OKR workspace</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {canManage && (
+            <Button
+              disabled={!selectedOpenCycle}
+              title={!selectedOpenCycle ? "Open a cycle before adding objectives." : undefined}
+              onClick={() => focusField("objective-title")}
+            >
+              <Plus aria-hidden="true" /> New objective
+            </Button>
+          )}
+          <Button
+            variant={canManage ? "outline" : "default"}
+            disabled={!selectedOpenCycle || !selectedCycle?.objectives.length}
+            title={!selectedOpenCycle ? "Open a cycle before adding key results." : !selectedCycle?.objectives.length ? "Add an objective first." : undefined}
+            onClick={() => focusField("kr-title")}
+          >
+            <Plus aria-hidden="true" /> New key result
+          </Button>
+        </div>
+      </header>
+
+      <div className="flex flex-col gap-4 rounded-xl border bg-card px-5 py-4 xl:flex-row xl:items-center xl:justify-between">
+        <p className="flex flex-wrap items-center gap-2 text-sm italic text-muted-foreground">
+          {selectedCycle ? (
+            <>
+              <span>Displaying data from {formatDate(selectedCycle.startDate)} to {formatDate(selectedCycle.endDate)}</span>
+              <Badge variant="outline" className="not-italic capitalize">{selectedCycle.status}</Badge>
+              <Badge variant="secondary" className="font-mono not-italic tabular-nums">v{selectedCycle.version}</Badge>
+            </>
+          ) : (
+            <span>No cycle yet — {canManage ? "create one in Cycles below to get started." : "ask a manager or admin to create one."}</span>
+          )}
+        </p>
+        <div className="grid gap-2 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)_auto] sm:items-center">
+          <Select value={selectedCycleId} onValueChange={setSelectedCycleId} disabled={!cycles.length}>
+            <SelectTrigger id="cycle-select" className="w-full" aria-label="Cycle">
+              <SelectValue placeholder="Choose a cycle" />
+            </SelectTrigger>
+            <SelectContent>
+              {cycles.map((cycle) => (
+                <SelectItem key={cycle.id} value={cycle.id}>
+                  {cycle.name} ({cycle.status})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+            <Input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search objectives and key results"
+              aria-label="Search objectives and key results"
+              className="pl-9 sm:min-w-64"
+            />
+          </div>
+          <Button variant="outline" onClick={exportCycle} disabled={!selectedCycle?.objectives.length}>
+            <Download aria-hidden="true" /> Export CSV
+          </Button>
+        </div>
+      </div>
+
+      {feedback && (
+        <Alert variant={feedback.tone === "error" ? "destructive" : "default"}>
+          <AlertTitle>{feedback.tone === "error" ? "Action blocked" : "Done"}</AlertTitle>
+          <AlertDescription>{feedback.message}</AlertDescription>
+        </Alert>
+      )}
+
+      <section id="overview" className="scroll-mt-20 md:scroll-mt-6">
+        <DashboardOverview cycle={selectedCycle} summaries={workspace.summaries} comparisons={workspace.comparisons} teamCount={teamCount} />
+      </section>
+
+      <section id="my-goals" className="scroll-mt-20 space-y-4 md:scroll-mt-6">
+        <div className="space-y-1">
+          <h2 className="text-xl">Goals</h2>
+          <p className="text-sm text-muted-foreground">Track objectives in the selected cycle, align key results, and check in on progress.</p>
+        </div>
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)] xl:items-start">
+        <Card className="shadow-none">
+          <CardHeader>
+            <CardTitle>Objectives</CardTitle>
+            <CardDescription>Add or edit objectives in the selected open cycle (optimistic version locked).</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <form className="grid gap-3" onSubmit={createObjective}>
+              <Field>
+                <FieldLabel htmlFor="objective-title">Objective title</FieldLabel>
+                <Input id="objective-title" required value={objectiveTitle} onChange={(event) => setObjectiveTitle(event.target.value)} disabled={busy || !canManage || !selectedOpenCycle} />
+              </Field>
+              <Button type="submit" disabled={busy || !canManage || !selectedOpenCycle}>Add objective</Button>
+            </form>
+            <div className="space-y-4">
+              {visibleObjectives.map((objective) => {
+                const objectiveProgress = objective.keyResults.length && objective.progress !== null ? Number(objective.progress) : null;
+                return (
+                  <article key={objective.id} id={`objective-${objective.id}`} className="scroll-mt-20 rounded-xl border bg-card p-4 md:scroll-mt-6">
+                    <header className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div className="min-w-0">
+                        <h3 className="text-base font-semibold text-foreground">{objective.title}</h3>
+                        {objective.description && <p className="mt-1 text-xs text-muted-foreground">{objective.description}</p>}
+                        <p className="mt-1 text-xs text-muted-foreground">Owner: {workspace.user.name} · {workspace.company.role}</p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline">{selectedCycle?.status ?? "No cycle"}</Badge>
+                        <Badge variant="secondary" className="font-mono tabular-nums">v{objective.version}</Badge>
+                        <Badge variant={objectiveProgress === null ? "secondary" : "default"} className="tabular-nums">
+                          {objectiveProgress === null ? "No KRs" : `${objectiveProgress.toFixed(0)}%`}
+                        </Badge>
+                      </div>
+                    </header>
+                    <div className="mt-3">
+                      <Progress value={objectiveProgress} tone={objectiveProgress === null ? "neutral" : progressTone(objectiveProgress)} aria-label={`${objective.title} progress`} />
+                    </div>
+                    {editingObjectiveId === objective.id && (
+                      <div className="mt-3 grid gap-2 rounded-lg border bg-muted/30 p-3">
+                        <Input value={objTitleDraft} onChange={(event) => setObjTitleDraft(event.target.value)} aria-label="Edit objective title" />
+                        <Textarea value={objDescriptionDraft} onChange={(event) => setObjDescriptionDraft(event.target.value)} placeholder="Description" aria-label="Edit objective description" />
+                        <div className="flex gap-2">
+                          <Button size="sm" disabled={busy || !selectedOpenCycle} onClick={() => saveObjective(objective)}>Save objective</Button>
+                          <Button size="sm" variant="ghost" onClick={() => setEditingObjectiveId(null)}>Cancel</Button>
+                        </div>
+                      </div>
+                    )}
+                    <div className="mt-3 divide-y divide-border rounded-lg bg-inset">
+                      {objective.keyResults.map((keyResult) => {
+                        const keyResultProgress = Number(keyResult.progress);
+                        return (
+                          <div key={keyResult.id} className="grid gap-3 p-3 sm:grid-cols-[1fr_auto] sm:items-center">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                                <p className="text-sm font-semibold text-foreground">{keyResult.title}</p>
+                                <span className="text-xs text-muted-foreground">Owner: {workspace.user.name}</span>
+                              </div>
+                              <p className="mt-1 text-xs tabular-nums text-muted-foreground">
+                                {metricValue(keyResult.baseline)} → {metricValue(keyResult.current)} → {metricValue(keyResult.target)} {keyResult.unit}
+                              </p>
+                              <div className="mt-2">
+                                <Progress value={keyResultProgress} tone={progressTone(keyResultProgress)} aria-label={`${keyResult.title} progress`} />
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-end">
+                              <span className="text-sm font-semibold tabular-nums">{keyResultProgress.toFixed(1)}%</span>
+                              <Button size="sm" disabled={busy || !selectedOpenCycle} title={!selectedOpenCycle ? "Open the cycle before checking in." : undefined} onClick={() => openCheckIn(keyResult)}>
+                                Check in
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {!objective.keyResults.length && <p className="p-3 text-xs text-muted-foreground">No KRs</p>}
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button variant="outline" size="sm" disabled={busy || !selectedOpenCycle} onClick={() => startEditingObjective(objective)}>Edit objective</Button>
+                      <Button variant="outline" size="sm" disabled={busy || !selectedOpenCycle} onClick={() => simulateConflict(objective)}>Simulate stale edit</Button>
+                    </div>
+                  </article>
+                );
+              })}
+              {!selectedCycle?.objectives.length && <p className="text-sm text-muted-foreground">No objectives yet.</p>}
+              {Boolean(selectedCycle?.objectives.length) && !visibleObjectives.length && (
+                <p className="text-sm text-muted-foreground">No objectives match the current search.</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-none">
+          <CardHeader>
+            <CardTitle>Key results</CardTitle>
+            <CardDescription>Progress clamps to 0–100, supports decreasing targets, and checks version on save.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <form className="grid gap-3" onSubmit={createKeyResult}>
+              <Field>
+                <FieldLabel htmlFor="kr-objective">Objective</FieldLabel>
+                <Select value={krObjectiveId} onValueChange={setKrObjectiveId}>
+                  <SelectTrigger id="kr-objective" className="w-full"><SelectValue placeholder="Choose an objective" /></SelectTrigger>
+                  <SelectContent>{selectedCycle?.objectives.map((objective) => <SelectItem key={objective.id} value={objective.id}>{objective.title}</SelectItem>)}</SelectContent>
+                </Select>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="kr-title">Key result title</FieldLabel>
+                <Input id="kr-title" required value={krTitle} onChange={(event) => setKrTitle(event.target.value)} disabled={busy || !selectedOpenCycle} />
+              </Field>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field>
+                  <FieldLabel htmlFor="kr-type">Metric</FieldLabel>
+                  <Select value={metricType} onValueChange={(value) => setMetricType(value as KeyResult["metricType"])}>
+                    <SelectTrigger id="kr-type" className="w-full"><SelectValue /></SelectTrigger>
+                    <SelectContent>{["numeric", "percentage", "currency", "binary"].map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent>
+                  </Select>
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="kr-direction">Direction</FieldLabel>
+                  <Select value={direction} onValueChange={(value) => setDirection(value as KeyResult["direction"])}>
+                    <SelectTrigger id="kr-direction" className="w-full"><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="increasing">increasing</SelectItem><SelectItem value="decreasing">decreasing</SelectItem></SelectContent>
+                  </Select>
+                </Field>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Field><FieldLabel htmlFor="kr-baseline">Baseline</FieldLabel><Input id="kr-baseline" type="number" step="any" value={baseline} onChange={(event) => setBaseline(event.target.value)} disabled={busy || !selectedOpenCycle} /></Field>
+                <Field><FieldLabel htmlFor="kr-target">Target</FieldLabel><Input id="kr-target" type="number" step="any" value={target} onChange={(event) => setTarget(event.target.value)} disabled={busy || !selectedOpenCycle} /></Field>
+                <Field><FieldLabel htmlFor="kr-current">Current</FieldLabel><Input id="kr-current" type="number" step="any" value={newKrCurrent} onChange={(event) => setNewKrCurrent(event.target.value)} disabled={busy || !selectedOpenCycle} /></Field>
+              </div>
+              <Button type="submit" disabled={busy || !selectedOpenCycle || !krObjectiveId}>Add key result</Button>
+            </form>
+            <Separator />
+            <p className="text-xs text-muted-foreground">Use Check in on an objective’s key result to update its current value with version protection.</p>
+          </CardContent>
+        </Card>
+        </div>
+      </section>
+
+      <section id="company-okrs" className="scroll-mt-20 space-y-4 md:scroll-mt-6">
+        <div className="space-y-1">
+          <h2 className="text-xl">Cycles</h2>
+          <p className="text-sm text-muted-foreground">Create, open, close and reopen OKR cycles.</p>
+        </div>
+        <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+        <Card className="shadow-none">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              Cycle setup
+              <Badge className="bg-accent text-accent-foreground">Governance</Badge>
+            </CardTitle>
+            <CardDescription>Cycles start as drafts. Open one before adding objectives.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form className="grid gap-3" onSubmit={createCycle}>
+              <Field>
+                <FieldLabel htmlFor="cycle-name">Name</FieldLabel>
+                <Input id="cycle-name" required value={cycleName} onChange={(event) => setCycleName(event.target.value)} disabled={busy || !canManage} />
+              </Field>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field>
+                  <FieldLabel htmlFor="cycle-start">Start</FieldLabel>
+                  <Input id="cycle-start" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} disabled={busy || !canManage} />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="cycle-end">End</FieldLabel>
+                  <Input id="cycle-end" type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} disabled={busy || !canManage} />
+                </Field>
+              </div>
+              <Button type="submit" disabled={busy || !canManage}>
+                Create draft cycle
+              </Button>
+              {!canManage && <p className="text-xs text-muted-foreground">Managers and admins can create cycles.</p>}
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-none">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              Cycle controls
+              <Badge className="bg-accent text-accent-foreground">Governance</Badge>
+            </CardTitle>
+            <CardDescription>Open, close, and admin-reopen cycles with audit reasons and final reflections.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Field>
+              <FieldLabel htmlFor="cycle-reflection">Final reflection</FieldLabel>
+              <Textarea
+                id="cycle-reflection"
+                value={reflectionDraft}
+                onChange={(event) => setReflectionDraft(event.target.value)}
+                disabled={busy || !canManage || !selectedOpenCycle}
+                placeholder={
+                  selectedCycle?.status === "closed"
+                    ? "Cycle is closed — reflection is locked until reopened by an admin."
+                    : "Summarize wins, misses, and learnings for this cycle..."
+                }
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="cycle-note">Close audit note</FieldLabel>
+              <Input id="cycle-note" value={openReason} onChange={(event) => setOpenReason(event.target.value)} disabled={busy || !canManage || !selectedOpenCycle} />
+            </Field>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="secondary"
+                disabled={busy || !canManage || selectedCycle?.status !== "draft"}
+                title={selectedCycle?.status !== "draft" ? "Only draft cycles can be opened." : undefined}
+                onClick={openCycle}
+              >
+                Open cycle
+              </Button>
+              <Button
+                variant="outline"
+                disabled={busy || !canManage || !selectedOpenCycle}
+                title={!selectedOpenCycle ? "Open the cycle before saving its reflection." : undefined}
+                onClick={saveReflection}
+              >
+                Save reflection
+              </Button>
+              <Button
+                disabled={busy || !canManage || selectedCycle?.status !== "open"}
+                title={selectedCycle?.status !== "open" ? "Only open cycles can be closed." : undefined}
+                onClick={closeCycle}
+              >
+                Close cycle
+              </Button>
+            </div>
+            <Field>
+              <FieldLabel htmlFor="reopen-reason">Admin reopen reason</FieldLabel>
+              <Input
+                id="reopen-reason"
+                value={reopenReason}
+                onChange={(event) => setReopenReason(event.target.value)}
+                placeholder="At least 3 characters"
+                disabled={busy || !isAdmin || selectedCycle?.status !== "closed"}
+              />
+            </Field>
+            <Button
+              disabled={busy || !isAdmin || selectedCycle?.status !== "closed" || reopenReason.trim().length < 3}
+              title={!isAdmin ? "Only admins can reopen a closed cycle." : selectedCycle?.status !== "closed" ? "Only closed cycles can be reopened." : "Enter an audit reason of at least 3 characters."}
+              onClick={reopenCycle}
+            >
+              Reopen with audit reason
+            </Button>
+          </CardContent>
+        </Card>
+        </div>
+      </section>
+
+      <section id="alignment" className="scroll-mt-20 md:scroll-mt-6">
+        <PeriodComparisonSection summaries={workspace.summaries} comparisons={workspace.comparisons} />
+      </section>
+
+      <section id="reports" className="scroll-mt-20 md:scroll-mt-6">
+        <Card className="shadow-none">
+          <CardHeader>
+            <CardTitle>Activity</CardTitle>
+            <CardDescription>Cycle closes, reopens, and workspace actions are recorded here.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Action</TableHead>
+                  <TableHead>Reason</TableHead>
+                  <TableHead>When</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {workspace.audit.map((entry) => (
+                  <TableRow key={entry.id}>
+                    <TableCell><Badge variant="secondary">{entry.action}</Badge></TableCell>
+                    <TableCell>{entry.reason}</TableCell>
+                    <TableCell className="tabular-nums">{new Date(entry.createdAt).toLocaleString()}</TableCell>
+                  </TableRow>
+                ))}
+                {!workspace.audit.length && (
+                  <TableRow>
+                    <TableCell className="text-muted-foreground">No audit entries yet.</TableCell>
+                    <TableCell /><TableCell />
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </section>
+
+      {selectedCheckInKr && selectedCycle && (
+        <CheckInModal
+          keyResult={selectedCheckInKr}
+          cycle={selectedCycle}
+          correcting={null}
+          onClose={() => setCheckInKrId(null)}
+          onSaved={async (message) => {
+            await loadWorkspace();
+            setFeedback({ tone: "success", message });
+          }}
+          onConflict={loadWorkspace}
+        />
+      )}
+      </>}
+    </AppShell>
+  );
+}

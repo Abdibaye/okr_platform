@@ -8,7 +8,7 @@
     "accent": "#2563eb",
     "mood": "neutral"
   },
-  "theme_pending": true,
+  "theme_pending": false,
   "css_seed_sha256": "44146b38cc7e7c3093588c9f443fe5cf769cd8b49d305271626c61f258a9879d",
   "adjustments": [
     "Dark interactive accent adjusted from #2563eb to #608df0 for contrast; brand-accent retains the requested color."

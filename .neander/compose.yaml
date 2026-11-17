@@ -15,7 +15,44 @@ x-neander:
     service: web
     port: 8080
     root_probe: /
-  environment: []
+  environment:
+    - service: web
+      name: DATABASE_URL
+      required: true
+      source: provisioned
+      provider: Neon
+    - service: web
+      name: BETTER_AUTH_URL
+      required: true
+      source: provisioned
+      provider: Neander
+      binding: public_origin
+    - service: web
+      name: BETTER_AUTH_SECRET
+      required: true
+      source: generated
+      provider: null
+      generator: opaque-random
+    - service: web
+      name: REMINDER_SWEEP_SECRET
+      required: false
+      source: user
+      provider: null
+    - service: web
+      name: RESEND_API_KEY
+      required: false
+      source: user
+      provider: null
+    - service: web
+      name: EMAIL_FROM
+      required: false
+      source: user
+      provider: null
+    - service: web
+      name: TRANSACTIONAL_EMAIL_WEBHOOK_URL
+      required: false
+      source: user
+      provider: null
   probes:
     - path: /api/health
       success_status_range: 2xx

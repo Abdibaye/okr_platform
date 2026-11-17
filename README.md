@@ -1,6 +1,6 @@
 # Next.js + TypeScript
 
-Use Node 24 and pnpm 11.18.0. Run `pnpm install --frozen-lockfile`, then `pnpm dev` (http://localhost:3000). `pnpm check` checks types; `pnpm build` prepares the production standalone output. No credentials or external services are required.
+Use Node 24 and pnpm 11.18.0. Run `pnpm install --frozen-lockfile`, copy the local database credentials into gitignored `.env.local`, then apply migrations with `pnpm db:migrate`, seed with `pnpm db:seed`, and run `pnpm dev` (http://localhost:3000). `pnpm check` checks types; `pnpm build` prepares the production standalone output. Demo credentials are `admin@demo.test / Demo1234!` and `member@demo.test / Demo1234!`.
 
 Publish uses `.neander/compose.yaml`. For local production verification, run `docker build -f .neander/Dockerfile -t my-next-app .` and `docker run --rm -p 8080:8080 my-next-app`. `/api/health` returns JSON. `public/` and `.next/static` are copied explicitly into the runtime image.
 
@@ -8,6 +8,13 @@ Add database/auth/API dependencies only when requested. Use server-side runtime 
 
 When adding persistence, follow the [Drizzle development database setup](.neander/blocks/drizzle/README.md#local-development-database): use local Docker PostgreSQL, an existing development PostgreSQL instance, or optional managed development Neon. The opt-in local Compose file is separate from the production recipe; a bare starter does not start a database.
 
+## Notifications, email and reminders
+
+All are optional server-side variables (declared in `.neander/compose.yaml`). Without an email provider, notifications stay in-app and show "In-app only"; failed emails show "Email failed" with a Retry button.
+
+- `RESEND_API_KEY` + `EMAIL_FROM` (for example `OKR Platform <okr@example.com>`): send email through Resend.
+- `TRANSACTIONAL_EMAIL_WEBHOOK_URL`: alternatively, POST `{from, to, subject, text, html}` JSON to your own email service.
+- `REMINDER_SWEEP_SECRET`: lets a scheduler run the reminder sweep for every company with `curl -X POST -H "Authorization: Bearer $REMINDER_SWEEP_SECRET" https://<app>/api/reminders/sweep` (for example once a day). Admins can also use "Run reminders now" on the Cycles page. Repeated sweeps never create duplicate reminders.
 
 ## Maintenance and verification
 
