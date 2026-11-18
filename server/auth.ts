@@ -3,7 +3,7 @@ import { betterAuth } from "better-auth";
 import { and, desc, eq, gt } from "drizzle-orm";
 import { getDb } from "./db";
 import { acceptInvitation } from "./people";
-import { companyMemberships, invitations } from "./schema";
+import { companies, companyMemberships, invitations } from "./schema";
 
 export const demoCompanyId = "6e2c4a1e-89a1-4d57-9c37-832473fd28d6";
 
@@ -121,10 +121,20 @@ function createAuth() {
               return true;
             });
             if (joined) return;
+            await database.insert(companies).values({
+              id: demoCompanyId,
+              name: "Demo Company",
+            }).onConflictDoNothing();
+
+            const [existingAdmin] = await database.select({ id: companyMemberships.id })
+              .from(companyMemberships)
+              .where(and(eq(companyMemberships.companyId, demoCompanyId), eq(companyMemberships.role, "admin")))
+              .limit(1);
+
             await database.insert(companyMemberships).values({
               companyId: demoCompanyId,
               userId: user.id,
-              role: "member",
+              role: existingAdmin ? "member" : "admin",
             }).onConflictDoNothing();
           },
         },

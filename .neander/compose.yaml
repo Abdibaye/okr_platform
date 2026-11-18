@@ -56,3 +56,4 @@ x-neander:
   probes:
     - path: /api/health
       success_status_range: 2xx
+  migration: nextjs-drizzle

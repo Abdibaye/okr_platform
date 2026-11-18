@@ -1,10 +1,12 @@
 import { headers } from "next/headers";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { getAuth } from "./auth";
+import { ensureBootstrap } from "./bootstrap";
 import { getDb } from "./db";
 import { companies, companyMemberships, teamMemberships, teams } from "./schema";
 
 export async function getRequestContext() {
+  await ensureBootstrap();
   const session = await getAuth().api.getSession({ headers: await headers() });
   if (!session) return null;
 
