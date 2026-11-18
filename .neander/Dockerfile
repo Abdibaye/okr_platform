@@ -1,11 +1,12 @@
 FROM node:24-bookworm-slim AS build
 WORKDIR /app
 RUN npm install -g pnpm@11.18.0
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN pnpm build
+# Bound Next.js page-data workers on builders reporting many host CPUs.
+RUN CIRCLE_NODE_TOTAL=2 pnpm build
 
 FROM node:24-bookworm-slim
 WORKDIR /app
