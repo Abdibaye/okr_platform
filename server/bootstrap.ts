@@ -12,12 +12,12 @@ export async function ensureBootstrap(): Promise<void> {
     try {
       const database = getDb();
 
-      // 1. Ensure Demo Company exists so foreign keys to companies never fail
+      // 1. Ensure Alineo Workspace exists so foreign keys to companies never fail
       await database
         .insert(companies)
         .values({
           id: demoCompanyId,
-          name: "Demo Company",
+          name: "Alineo Demo Workspace",
         })
         .onConflictDoNothing();
 

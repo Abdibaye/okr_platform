@@ -9,7 +9,10 @@ import "@fontsource/manrope/700.css";
 import "./globals.css";
 import type { ReactNode } from "react";
 
-export const metadata = { title: "OKR Platform" };
+export const metadata = {
+  title: "Alineo · Strategic OKR Platform",
+  description: "Connect strategic vision with everyday execution across your organization.",
+};
 
 const themeInitScript = `(function(){try{var stored=localStorage.getItem("okr-theme");var prefersDark=window.matchMedia("(prefers-color-scheme: dark)").matches;if(stored==="dark"||(!stored&&prefersDark))document.documentElement.classList.add("dark");}catch(e){}})();`;
 

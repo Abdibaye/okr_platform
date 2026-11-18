@@ -18,9 +18,9 @@ export async function sendInvitationEmail({ to, url, companyName, inviterName }:
   if (!emailProvider()) console.info(`Invitation link for ${to} (${companyName}): ${url}`);
   const result = await sendEmail({
     to,
-    subject: `${inviterName} invited you to ${companyName} on OKR Platform`,
-    text: `${inviterName} invited you to join ${companyName}. Accept the invitation here (valid for 7 days): ${url}`,
-    html: `<p>${escapeHtml(inviterName)} invited you to join <strong>${escapeHtml(companyName)}</strong> on OKR Platform.</p><p><a href="${escapeHtml(url)}">Accept invitation</a></p><p>This link is valid for 7 days.</p>`,
+    subject: `${inviterName} invited you to ${companyName} on Alineo`,
+    text: `${inviterName} invited you to join ${companyName} on Alineo. Accept the invitation here (valid for 7 days): ${url}`,
+    html: `<p>${escapeHtml(inviterName)} invited you to join <strong>${escapeHtml(companyName)}</strong> on Alineo.</p><p><a href="${escapeHtml(url)}">Accept invitation</a></p><p>This link is valid for 7 days.</p>`,
   });
   return result.status === "failed" ? { status: "failed", error: result.error } : { status: result.status, error: null };
 }

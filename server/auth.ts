@@ -38,11 +38,11 @@ async function deliverResetPasswordEmail(email: string, url: string) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: process.env.EMAIL_FROM || "OKR Platform <onboarding@resend.dev>",
+        from: process.env.EMAIL_FROM || "Alineo <onboarding@resend.dev>",
         to: [email],
-        subject: "Reset your OKR password",
+        subject: "Reset your Alineo password",
         text: `Reset your password using this link: ${url}`,
-        html: `<p>Reset your OKR Platform password using the link below:</p><p><a href="${url}">Reset password</a></p>`,
+        html: `<p>Reset your Alineo password using the link below:</p><p><a href="${url}">Reset password</a></p>`,
       }),
     });
     if (!response.ok) {
@@ -123,7 +123,7 @@ function createAuth() {
             if (joined) return;
             await database.insert(companies).values({
               id: demoCompanyId,
-              name: "Demo Company",
+              name: "Alineo Demo Workspace",
             }).onConflictDoNothing();
 
             const [existingAdmin] = await database.select({ id: companyMemberships.id })

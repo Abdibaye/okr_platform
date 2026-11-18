@@ -140,7 +140,7 @@ function SidebarFooter({ workspace, expanded, onSignOut, onNavigate }: {
 }
 
 function Logo() {
-  return <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-brand-teal text-sm font-bold text-sidebar" aria-hidden="true">O</span>;
+  return <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-brand-teal text-sm font-bold text-sidebar" aria-hidden="true">A</span>;
 }
 
 export function AppShell({
@@ -193,7 +193,7 @@ export function AppShell({
             {expanded && (
               <span className="min-w-0">
                 <span className="block truncate text-sm font-semibold">{workspace.company.name}</span>
-                <span className="block truncate text-xs text-sidebar-muted">OKR workspace</span>
+                <span className="block truncate text-xs text-sidebar-muted">Alineo workspace</span>
               </span>
             )}
           </div>
