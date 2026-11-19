@@ -19,6 +19,7 @@ import {
 import { recordAudit } from "@/server/people";
 import { hasRole } from "@/server/request-context";
 import { keyResults, objectives, okrCycles } from "@/server/schema";
+import { archiveObjectiveAndKeyResults } from "@/server/archive";
 
 const AUDITED_FIELDS = [
   ["ownerId", "objective_owner_changed", "owner"],
@@ -78,16 +79,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       }
 
       if (archiving) {
+        await archiveObjectiveAndKeyResults(transaction, id);
         const [archived] = await transaction.update(objectives).set({
-          archivedAt: new Date(),
           version: objective.version + 1,
           updatedAt: new Date(),
         }).where(eq(objectives.id, id)).returning();
         // Children stay in the cycle but are no longer aligned to an archived goal.
         await transaction.update(objectives).set({ parentObjectiveId: null, updatedAt: new Date() })
           .where(and(eq(objectives.companyId, context.companyId), eq(objectives.parentObjectiveId, id)));
-        await transaction.update(keyResults).set({ archivedAt: new Date(), updatedAt: new Date() })
-          .where(and(eq(keyResults.objectiveId, id), isNull(keyResults.archivedAt)));
         await recordAudit(transaction, {
           companyId: context.companyId,
           cycleId: objective.cycleId,
