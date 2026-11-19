@@ -19,6 +19,7 @@ import {
   Network,
   Pencil,
   Plus,
+  RotateCcw,
   Search,
   Send,
   Target,
@@ -52,6 +53,7 @@ import type { CheckInEntry, GoalStatus, KeyResult, Objective } from "@/app/types
 import { cn } from "@/lib/utils";
 
 const ALL = "all";
+const ARCHIVED = "archived";
 
 type GoalTab = "mine" | "reports" | "team" | "company";
 
@@ -105,7 +107,14 @@ export default function GoalsPage() {
   );
   const cycleIndex = cycles.findIndex((cycle) => cycle.id === selectedCycle?.id);
   const cycleObjectives = useMemo(() => selectedCycle?.objectives ?? [], [selectedCycle]);
-  const objectiveById = useMemo(() => new Map(cycleObjectives.map((objective) => [objective.id, objective])), [cycleObjectives]);
+  const archivedObjectives = useMemo(
+    () => (workspace?.archivedObjectives ?? []).filter((objective) => objective.cycleId === selectedCycle?.id),
+    [workspace?.archivedObjectives, selectedCycle?.id],
+  );
+  const objectiveById = useMemo(
+    () => new Map([...cycleObjectives, ...archivedObjectives].map((objective) => [objective.id, objective])),
+    [archivedObjectives, cycleObjectives],
+  );
   const childrenByParent = useMemo(() => {
     const map = new Map<string, Objective[]>();
     for (const objective of cycleObjectives) {
@@ -160,7 +169,8 @@ export default function GoalsPage() {
     const reports = new Set(user.directReportIds);
     const myTeams = new Set(user.teamIds);
     const query = search.trim().toLowerCase();
-    return cycleObjectives.filter((objective) => {
+    const archivedSelected = statusFilter === ARCHIVED;
+    return (archivedSelected ? archivedObjectives : cycleObjectives).filter((objective) => {
       if (tab === "mine" && objective.ownerId !== user.id) return false;
       if (tab === "reports" && !(objective.ownerId && reports.has(objective.ownerId))) return false;
       if (tab === "team") {
@@ -170,13 +180,13 @@ export default function GoalsPage() {
       }
       if (tab === "company" && objective.level !== "company") return false;
       if (ownerFilter !== ALL && objective.ownerId !== ownerFilter) return false;
-      if (statusFilter === "pending_approval") {
+      if (!archivedSelected && statusFilter === "pending_approval") {
         if (objective.approvalStatus !== "pending") return false;
-      } else if (statusFilter !== ALL && objective.status !== statusFilter) return false;
+      } else if (!archivedSelected && statusFilter !== ALL && objective.status !== statusFilter) return false;
       if (query && !objective.title.toLowerCase().includes(query) && !objective.keyResults.some((keyResult) => keyResult.title.toLowerCase().includes(query))) return false;
       return true;
     });
-  }, [workspace, cycleObjectives, tab, ownerFilter, statusFilter, search, memberById]);
+  }, [workspace, archivedObjectives, cycleObjectives, tab, ownerFilter, statusFilter, search, memberById]);
 
   // Tree view nests matching goals under a matching parent; list view shows every match flat.
   const topLevel = useMemo(() => {
@@ -304,6 +314,11 @@ export default function GoalsPage() {
               </DropdownMenuItem>
             </>
           )}
+          {Boolean(objective.archivedAt) && objective.canManage && (
+            <DropdownMenuItem disabled={busy} onSelect={() => setRestoreTarget(objective)}>
+              <RotateCcw /> Restore
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     );
@@ -418,6 +433,7 @@ export default function GoalsPage() {
           <TableCell>
             <div className="flex flex-wrap gap-1">
               <Badge variant={objective.status === "active" ? "default" : objective.status === "cancelled" ? "destructive" : "outline"}>{statusLabels[objective.status]}</Badge>
+              {objective.archivedAt && <Badge variant="outline">Archived</Badge>}
               <ApprovalBadge objective={objective} />
             </div>
           </TableCell>
@@ -526,6 +542,7 @@ export default function GoalsPage() {
                 <SelectItem value={ALL}>All statuses</SelectItem>
                 {(Object.keys(statusLabels) as GoalStatus[]).map((status) => <SelectItem key={status} value={status}>{statusLabels[status]}</SelectItem>)}
                 <SelectItem value="pending_approval">Awaiting approval</SelectItem>
+                <SelectItem value={ARCHIVED}>Archived</SelectItem>
               </SelectContent>
             </Select>
             <div className="relative xl:w-64">
@@ -561,7 +578,7 @@ export default function GoalsPage() {
               {!pageRows.length && (
                 <TableRow>
                   <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
-                    {!selectedCycle ? "No cycle yet." : cycleObjectives.length ? "No goals match this view and filters." : "No goals in this cycle yet."}
+                    {!selectedCycle ? "No cycle yet." : cycleObjectives.length || archivedObjectives.length ? "No goals match this view and filters." : "No goals in this cycle yet."}
                   </TableCell>
                 </TableRow>
               )}
@@ -637,6 +654,21 @@ export default function GoalsPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setArchiveTarget(null)}>Cancel</Button>
             <Button variant="destructive" disabled={busy} onClick={confirmArchive}>Archive goal</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={restoreTarget !== null} onOpenChange={(open) => { if (!open) setRestoreTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Restore goal?</DialogTitle>
+            <DialogDescription>
+              “{restoreTarget?.title}” and its key results will be restored. Check-in history, access and ownership stay unchanged.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRestoreTarget(null)}>Cancel</Button>
+            <Button disabled={busy} onClick={confirmRestore}>Restore goal</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

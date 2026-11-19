@@ -1,9 +1,28 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { getDb } from "./db";
 import { canEditKeyResult, canEditObjective, loadAccessIndex, viewerFromContext, type ObjectiveAccessFacts } from "./org-access";
 import type { RequestContext } from "./request-context";
 import { keyResults, objectives } from "./schema";
 import { InputError } from "./objectives";
+
+type Transaction = Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0];
+
+export async function archiveObjectiveAndKeyResults(transaction: Transaction, objectiveId: string) {
+  const archivedAt = new Date();
+  await transaction.update(objectives).set({ archivedAt, updatedAt: archivedAt })
+    .where(eq(objectives.id, objectiveId));
+  await transaction.update(keyResults).set({ archivedAt, updatedAt: archivedAt })
+    .where(and(eq(keyResults.objectiveId, objectiveId), isNull(keyResults.archivedAt)));
+}
+
+export async function restoreObjectiveAndKeyResults(transaction: Transaction, objectiveId: string) {
+  const restoredAt = new Date();
+  const restoredObjectives = await transaction.update(objectives).set({ archivedAt: null, updatedAt: restoredAt })
+    .where(and(eq(objectives.id, objectiveId), isNotNull(objectives.archivedAt)));
+  if (restoredObjectives.rowCount !== 1) return;
+  await transaction.update(keyResults).set({ archivedAt: null, updatedAt: restoredAt })
+    .where(and(eq(keyResults.objectiveId, objectiveId), isNotNull(keyResults.archivedAt)))
+}
 
 export async function loadEditableObjective(context: RequestContext, objectiveId: string) {
   const [objective] = await getDb().select().from(objectives)

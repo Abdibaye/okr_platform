@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { contextOr401, errorResponse, isResponse } from "@/server/api-utils";
 import { getDb } from "@/server/db";
+import { restoreObjectiveAndKeyResults } from "@/server/archive";
 import { recordAudit } from "@/server/people";
 import { objectives } from "@/server/schema";
 import { InputError } from "@/server/objectives";
@@ -20,8 +21,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     const facts = await loadObjectiveAccessFacts(getDb(), context.companyId, id, objective.ownerId);
     if (!canManagePrivacy(objective, viewerFromContext(context), facts)) throw new InputError("Only the goal owner, managers and admins can restore a goal.", 403);
     await getDb().transaction(async (transaction) => {
-      await transaction.update(objectives).set({ archivedAt: null, updatedAt: new Date() })
-        .where(and(eq(objectives.id, id), isNotNull(objectives.archivedAt)));
+      await restoreObjectiveAndKeyResults(transaction, id);
       await recordAudit(transaction, {
         companyId: context.companyId,
         cycleId: objective.cycleId,

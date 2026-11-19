@@ -96,3 +96,15 @@ export async function resolveNotifications(executor: Executor, companyId: string
     isNull(notifications.readAt),
   ));
 }
+
+/** Marks unread notifications about any listed entity as read, e.g. stale check-in requests when a cycle closes. */
+export async function resolveNotificationsForEntities(executor: Executor, companyId: string, entityIds: string[], types: NotificationType[]) {
+  if (!entityIds.length) return 0;
+  const rows = await executor.update(notifications).set({ readAt: new Date() }).where(and(
+    eq(notifications.companyId, companyId),
+    inArray(notifications.entityId, entityIds),
+    inArray(notifications.type, types),
+    isNull(notifications.readAt),
+  )).returning({ id: notifications.id });
+  return rows.length;
+}

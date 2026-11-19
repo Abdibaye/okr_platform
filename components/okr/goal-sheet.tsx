@@ -506,7 +506,7 @@ export function GoalSheet({
                 open={openSections.comments}
                 onToggle={() => setOpenSections((previous) => ({ ...previous, comments: !previous.comments }))}
               >
-                {openSections.comments && <GoalComments objectiveId={objective.id} />}
+                {openSections.comments && <GoalComments objectiveId={objective.id} closed={cycleClosed} />}
               </Section>
             )}
           </div>

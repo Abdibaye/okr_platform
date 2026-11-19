@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
 import { contextOr401, errorResponse, isResponse } from "@/server/api-utils";
 import { getDb } from "@/server/db";
-import { loadEditableObjective } from "@/server/archive";
+import { archiveObjectiveAndKeyResults, loadEditableObjective } from "@/server/archive";
 import { recordAudit } from "@/server/people";
-import { objectives } from "@/server/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +13,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   try {
     const objective = await loadEditableObjective(context, id);
     await getDb().transaction(async (transaction) => {
-      await transaction.update(objectives).set({ archivedAt: new Date(), updatedAt: new Date() }).where(eq(objectives.id, objective.id));
+      await archiveObjectiveAndKeyResults(transaction, objective.id);
       await recordAudit(transaction, {
         companyId: context.companyId,
         cycleId: objective.cycleId,

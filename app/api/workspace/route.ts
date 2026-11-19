@@ -64,7 +64,17 @@ export async function GET() {
     if (canViewObjective(objective, viewer, accessIndex.factsFor(objective))) visibleIds.add(objective.id);
   }
   const objectiveRows = allObjectives.filter((objective) => visibleIds.has(objective.id) && !objective.archivedAt);
+  const archivedObjectiveRows = allObjectives.filter((objective) => visibleIds.has(objective.id) && Boolean(objective.archivedAt));
   const objectiveIds = objectiveRows.map((objective) => objective.id);
+  const archivedObjectiveIds = archivedObjectiveRows.map((objective) => objective.id);
+  const archivedResultIds = archivedObjectiveIds.length
+    ? await database.select({ id: keyResults.id })
+      .from(keyResults)
+      .where(and(
+        eq(keyResults.companyId, context.companyId),
+        inArray(keyResults.objectiveId, archivedObjectiveIds),
+      ))
+    : [];
   const resultRows = objectiveIds.length
     ? await database.select().from(keyResults).where(and(
       eq(keyResults.companyId, context.companyId),
@@ -84,12 +94,22 @@ export async function GET() {
     : [];
 
   const krObjective = new Map(resultRows.map((result) => [result.id, result.objectiveId]));
+  const archivedResultRows = archivedResultIds.length
+    ? await database.select().from(keyResults).where(inArray(keyResults.id, archivedResultIds.map((result) => result.id)))
+      .orderBy(keyResults.createdAt)
+    : [];
+  const archivedEditorRows = archivedResultRows.length
+    ? await database.select({ keyResultId: keyResultEditors.keyResultId, userId: keyResultEditors.userId }).from(keyResultEditors)
+      .where(inArray(keyResultEditors.keyResultId, archivedResultRows.map((result) => result.id)))
+    : [];
   const editorsByResult = new Map<string, string[]>();
-  for (const row of editorRows) {
+  const addEditor = (row: { keyResultId: string; userId: string }) => {
     const list = editorsByResult.get(row.keyResultId) ?? [];
     list.push(row.userId);
     editorsByResult.set(row.keyResultId, list);
-  }
+  };
+  editorRows.forEach(addEditor);
+  archivedEditorRows.forEach(addEditor);
 
   const person = (id: string | null) => {
     const member = id ? membersById.get(id) : undefined;
@@ -108,6 +128,28 @@ export async function GET() {
       canManage: canManagePrivacy(objective, viewer, facts),
       canApprove: context.role === "admin" || (facts.ownerManagerId !== null && facts.ownerManagerId === userId),
       keyResults: resultRows.filter((result) => result.objectiveId === objective.id).map((result) => {
+        const editors = editorsByResult.get(result.id) ?? [];
+        return {
+          ...result,
+          owner: person(result.ownerId),
+          editorIds: editors,
+          canCheckIn: canEditKeyResult(objective, result, viewer, facts, editors),
+        };
+      }),
+    };
+  });
+  const hydratedArchivedObjectives = archivedObjectiveRows.map((objective) => {
+    const facts = accessIndex.factsFor(objective);
+    const canEdit = canEditObjective(objective, viewer, facts);
+    return {
+      ...objective,
+      owner: person(objective.ownerId),
+      team: objective.teamId ? teamsById.get(objective.teamId) ?? null : null,
+      access: accessIndex.accessFor(objective.id),
+      canEdit,
+      canManage: canManagePrivacy(objective, viewer, facts),
+      canApprove: context.role === "admin" || (facts.ownerManagerId !== null && facts.ownerManagerId === userId),
+      keyResults: archivedResultRows.filter((result) => result.objectiveId === objective.id).map((result) => {
         const editors = editorsByResult.get(result.id) ?? [];
         return {
           ...result,
@@ -164,6 +206,7 @@ export async function GET() {
     })),
     teams: teamRows,
     cycles: hydratedCycles,
+    archivedObjectives: hydratedArchivedObjectives,
     summaries,
     comparisons,
     audit,

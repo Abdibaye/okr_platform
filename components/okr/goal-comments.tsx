@@ -31,7 +31,7 @@ function CommentBody({ body, names }: { body: string; names: Map<string, string>
  * Discussion on a goal. Typing `@` suggests only people who can already see the goal (the server
  * enforces the same rule), and the chosen names are sent as `@[id]` tokens so emails stay private.
  */
-export function GoalComments({ objectiveId }: { objectiveId: string }) {
+export function GoalComments({ objectiveId, closed = false }: { objectiveId: string; closed?: boolean }) {
   const [comments, setComments] = useState<GoalComment[]>([]);
   const [mentionable, setMentionable] = useState<PersonSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -175,6 +175,9 @@ export function GoalComments({ objectiveId }: { objectiveId: string }) {
         <p className="text-sm text-muted-foreground">No comments yet. Start the conversation.</p>
       )}
 
+      {closed ? (
+        <p className="text-sm text-muted-foreground">This cycle is closed — comments are read-only.</p>
+      ) : (
       <div className="relative space-y-2">
         <Label htmlFor={`comment-${objectiveId}`}>Add a comment</Label>
         <Textarea
@@ -220,6 +223,7 @@ export function GoalComments({ objectiveId }: { objectiveId: string }) {
           </Button>
         </div>
       </div>
+      )}
     </div>
   );
 }

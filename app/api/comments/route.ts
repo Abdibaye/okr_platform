@@ -5,7 +5,7 @@ import { getDb } from "@/server/db";
 import { createNotifications, deliverNotificationEmails } from "@/server/notifications";
 import { canViewObjective, loadVisibleObjective, viewerFromChart, type ObjectiveAccessFacts } from "@/server/org-access";
 import type { RequestContext } from "@/server/request-context";
-import { companyMemberships, goalComments, keyResults, objectives, user } from "@/server/schema";
+import { companyMemberships, goalComments, keyResults, objectives, okrCycles, user } from "@/server/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -105,6 +105,12 @@ export async function POST(request: Request) {
   if (!text || text.length > MAX_BODY) return errorResponse(`Comments must be 1–${MAX_BODY.toLocaleString("en-US")} characters.`, 400);
   const target = await loadTarget(context, body?.objectiveId, body?.keyResultId);
   if (!target) return errorResponse(NOT_FOUND, 404);
+
+  const [cycle] = await getDb().select({ status: okrCycles.status }).from(okrCycles).where(and(
+    eq(okrCycles.id, target.objective.cycleId),
+    eq(okrCycles.companyId, context.companyId),
+  )).limit(1);
+  if (cycle?.status === "closed") return errorResponse("This cycle is closed; comments are locked.", 403);
 
   const authorId = context.session.user.id;
   const people = await mentionablePeople(context, target.objective, target.facts);

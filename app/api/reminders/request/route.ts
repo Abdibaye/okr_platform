@@ -4,7 +4,7 @@ import { contextOr401, errorResponse, isResponse, isUuid, readJson } from "@/ser
 import { getDb } from "@/server/db";
 import { createNotifications, deliverNotificationEmails, type NotificationEntry } from "@/server/notifications";
 import { canRequestCheckIn, canViewObjective, loadObjectiveAccessFacts, loadOrgChart, viewerFromChart, viewerFromContext } from "@/server/org-access";
-import { keyResults, objectives, user } from "@/server/schema";
+import { keyResults, objectives, okrCycles, user } from "@/server/schema";
 
 const NOT_FOUND = "Goal not found.";
 
@@ -62,6 +62,13 @@ export async function POST(request: Request) {
     if (!goal) return errorResponse(NOT_FOUND, 404);
     const facts = await loadObjectiveAccessFacts(database, context.companyId, goal.id, goal.ownerId);
     if (!canViewObjective(goal, viewer, facts)) return errorResponse(NOT_FOUND, 404);
+
+    const [cycle] = await database.select({ status: okrCycles.status }).from(okrCycles).where(and(
+      eq(okrCycles.id, goal.cycleId),
+      eq(okrCycles.companyId, context.companyId),
+    )).limit(1);
+    if (cycle?.status === "closed") return errorResponse("This cycle is closed; check-in requests are disabled.", 403);
+
     const recipientId = keyResult?.ownerId ?? goal.ownerId;
     if (!recipientId || !viewerFromChart(chart, recipientId)) return errorResponse("This has no active owner to ask.", 400);
     if (recipientId === actorId) return errorResponse("You own this; check in directly instead.", 400);

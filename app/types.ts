@@ -70,6 +70,7 @@ export interface Workspace {
   members: WorkspaceMember[];
   teams: WorkspaceTeam[];
   cycles: Cycle[];
+  archivedObjectives: Objective[];
   summaries: CycleSummary[];
   comparisons: PeriodComparison[];
   audit: AuditLog[];
@@ -85,6 +86,7 @@ export interface Cycle {
   requireApproval: boolean;
   checkInCadence: CheckInCadence;
   archivedAt: string | null;
+
   version: number;
   objectives: Objective[];
 }
@@ -109,6 +111,7 @@ export interface Objective {
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+  archivedAt: string | null;
   version: number;
   access: { userId: string; permission: "viewer" | "editor" }[];
   canEdit: boolean;

@@ -19,6 +19,7 @@ import {
 import { recordAudit } from "@/server/people";
 import { hasRole } from "@/server/request-context";
 import { keyResults, objectives, okrCycles } from "@/server/schema";
+import { archiveObjectiveAndKeyResults } from "@/server/archive";
 
 const AUDITED_FIELDS = [
   ["ownerId", "objective_owner_changed", "owner"],
@@ -78,8 +79,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       }
 
       if (archiving) {
+        await archiveObjectiveAndKeyResults(transaction, id);
         const [archived] = await transaction.update(objectives).set({
-          archivedAt: new Date(),
           version: objective.version + 1,
           updatedAt: new Date(),
         }).where(eq(objectives.id, id)).returning();
