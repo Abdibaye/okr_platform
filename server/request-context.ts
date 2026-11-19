@@ -9,8 +9,8 @@ export async function getRequestContext() {
   if (!session) return null;
 
   const database = getDb();
-  // Prefer an active membership; newest first so an accepted invitation wins over the demo default.
-  const [membership] = await database.select({
+  // Load all memberships for this user, ordered with active and newest first
+  const allMemberships = await database.select({
     companyId: companyMemberships.companyId,
     role: companyMemberships.role,
     isActive: companyMemberships.isActive,
@@ -20,10 +20,23 @@ export async function getRequestContext() {
   }).from(companyMemberships)
     .innerJoin(companies, eq(companies.id, companyMemberships.companyId))
     .where(eq(companyMemberships.userId, session.user.id))
-    .orderBy(desc(companyMemberships.isActive), desc(companyMemberships.createdAt))
-    .limit(1);
+    .orderBy(desc(companyMemberships.isActive), desc(companyMemberships.createdAt));
 
-  if (!membership) return null;
+  if (!allMemberships.length) return null;
+
+  const activeMemberships = allMemberships.filter((m) => m.isActive);
+  if (!activeMemberships.length) {
+    const deactivated = allMemberships[0];
+    return { session, ...deactivated, teamIds: [], availableCompanies: [] };
+  }
+
+  // Check if an active_company_id cookie is present
+  const headerList = await headers();
+  const cookieHeader = headerList.get("cookie") ?? "";
+  const match = cookieHeader.match(/(?:^|;\s*)active_company_id=([^;]+)/);
+  const requestedCompanyId = match ? decodeURIComponent(match[1]) : null;
+
+  const membership = (requestedCompanyId && activeMemberships.find((m) => m.companyId === requestedCompanyId)) || activeMemberships[0];
 
   const teamRows = await database.select({ teamId: teamMemberships.teamId })
     .from(teamMemberships)
@@ -34,7 +47,12 @@ export async function getRequestContext() {
       isNull(teams.archivedAt),
     ));
 
-  return { session, ...membership, teamIds: teamRows.map((row) => row.teamId) };
+  return {
+    session,
+    ...membership,
+    teamIds: teamRows.map((row) => row.teamId),
+    availableCompanies: activeMemberships.map((m) => ({ id: m.companyId, name: m.companyName, role: m.role })),
+  };
 }
 
 export type RequestContext = NonNullable<Awaited<ReturnType<typeof getRequestContext>>>;

@@ -66,6 +66,7 @@ export interface PeriodComparison {
 export interface Workspace {
   user: WorkspaceUser;
   company: { id: string; name: string; role: Role };
+  workspaces?: { id: string; name: string; role: Role }[];
   members: WorkspaceMember[];
   teams: WorkspaceTeam[];
   cycles: Cycle[];
