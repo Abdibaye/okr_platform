@@ -53,6 +53,12 @@ x-neander:
       required: false
       source: user
       provider: null
+    - service: web
+      name: PASSWORD_RESET_WEBHOOK_URL
+      required: false
+      source: user
+      provider: null
   probes:
     - path: /api/health
       success_status_range: 2xx
+  migration: nextjs-drizzle

@@ -203,7 +203,7 @@ export function AuthScreen({ initialNotice = null }: { initialNotice?: string | 
                   </div>
                   <div className="flex items-center gap-2 rounded-md bg-background/80 px-3 py-1 text-[11px] font-mono text-muted-foreground border border-border/60">
                     <Lock className="h-3 w-3 text-emerald-600" />
-                    <span>app.okr-platform.internal/dashboard</span>
+                    <span>app.alineo.ai/dashboard</span>
                   </div>
                   <div className="w-10" />
                 </div>
@@ -212,7 +212,7 @@ export function AuthScreen({ initialNotice = null }: { initialNotice?: string | 
                 <div className="relative bg-muted/20">
                   <Image
                     src="/okrhome.png"
-                    alt="OKR Workspace Dashboard"
+                    alt="Alineo Dashboard"
                     width={3016}
                     height={1720}
                     priority
@@ -229,7 +229,7 @@ export function AuthScreen({ initialNotice = null }: { initialNotice?: string | 
       <footer className="border-t border-border/80 py-5 text-xs text-muted-foreground bg-background">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-foreground">OKR Platform</span>
+            <span className="font-semibold text-foreground">Alineo</span>
             <span>· Enterprise Ready</span>
           </div>
 
@@ -244,7 +244,7 @@ export function AuthScreen({ initialNotice = null }: { initialNotice?: string | 
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold tracking-tight">
-              {mode === "login" ? "Sign in to OKR Workspace" : "Create your workspace account"}
+              {mode === "login" ? "Sign in to Alineo" : "Create your Alineo account"}
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
               {mode === "login"

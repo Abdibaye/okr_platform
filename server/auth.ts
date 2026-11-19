@@ -3,7 +3,7 @@ import { betterAuth } from "better-auth";
 import { and, desc, eq, gt } from "drizzle-orm";
 import { getDb } from "./db";
 import { acceptInvitation } from "./people";
-import { companyMemberships, invitations } from "./schema";
+import { companies, companyMemberships, invitations } from "./schema";
 
 export const demoCompanyId = "6e2c4a1e-89a1-4d57-9c37-832473fd28d6";
 
@@ -38,11 +38,11 @@ async function deliverResetPasswordEmail(email: string, url: string) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: process.env.EMAIL_FROM || "OKR Platform <onboarding@resend.dev>",
+        from: process.env.EMAIL_FROM || "Alineo <onboarding@resend.dev>",
         to: [email],
-        subject: "Reset your OKR password",
+        subject: "Reset your Alineo password",
         text: `Reset your password using this link: ${url}`,
-        html: `<p>Reset your OKR Platform password using the link below:</p><p><a href="${url}">Reset password</a></p>`,
+        html: `<p>Reset your Alineo password using the link below:</p><p><a href="${url}">Reset password</a></p>`,
       }),
     });
     if (!response.ok) {
@@ -121,10 +121,20 @@ function createAuth() {
               return true;
             });
             if (joined) return;
+            await database.insert(companies).values({
+              id: demoCompanyId,
+              name: "Alineo Demo Workspace",
+            }).onConflictDoNothing();
+
+            const [existingAdmin] = await database.select({ id: companyMemberships.id })
+              .from(companyMemberships)
+              .where(and(eq(companyMemberships.companyId, demoCompanyId), eq(companyMemberships.role, "admin")))
+              .limit(1);
+
             await database.insert(companyMemberships).values({
               companyId: demoCompanyId,
               userId: user.id,
-              role: "member",
+              role: existingAdmin ? "member" : "admin",
             }).onConflictDoNothing();
           },
         },

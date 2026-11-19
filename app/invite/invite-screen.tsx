@@ -81,7 +81,7 @@ export function InviteScreen({ token, details, signedInEmail }: {
             <CardHeader>
               <CardTitle className="text-2xl">Join {details.companyName}</CardTitle>
               <CardDescription>
-                {details.inviterName} invited <span className="font-medium text-foreground">{details.email}</span> to the OKR workspace.
+                {details.inviterName} invited <span className="font-medium text-foreground">{details.email}</span> to the Alineo workspace.
               </CardDescription>
               <div className="flex flex-wrap gap-2 pt-1">
                 <Badge variant="secondary">Role: {details.role}</Badge>

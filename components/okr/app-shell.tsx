@@ -141,7 +141,7 @@ function SidebarFooter({ workspace, expanded, onSignOut, onNavigate }: {
 }
 
 function Logo() {
-  return <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-brand-teal text-sm font-bold text-sidebar" aria-hidden="true">O</span>;
+  return <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-brand-teal text-sm font-bold text-sidebar" aria-hidden="true">A</span>;
 }
 
 export function AppShell({

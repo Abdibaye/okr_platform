@@ -108,7 +108,7 @@ export function WorkspaceSwitcher({ workspace, onWorkspaceSwitched, className }:
                   {currentCompany.name}
                 </p>
                 <p className="truncate text-[11px] capitalize text-sidebar-muted">
-                  {currentCompany.role} · OKR Workspace
+                  {currentCompany.role} · Alineo workspace
                 </p>
               </div>
             </div>

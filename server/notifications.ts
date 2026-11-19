@@ -70,7 +70,7 @@ export async function deliverNotificationEmail(notificationId: string) {
   const result = await sendEmail({
     to: row.email,
     subject: row.notification.title,
-    text: [row.notification.body, link ? `Open in OKR Platform: ${link}` : ""].filter(Boolean).join("\n\n"),
+    text: [row.notification.body, link ? `Open in Alineo: ${link}` : ""].filter(Boolean).join("\n\n"),
   });
   const [updated] = await database.update(notifications).set({
     emailStatus: result.status,
