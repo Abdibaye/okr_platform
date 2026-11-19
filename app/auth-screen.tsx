@@ -387,33 +387,6 @@ export function AuthScreen({ initialNotice = null }: { initialNotice?: string | 
                 </Alert>
               </div>
             )}
-
-            <div className="mt-4 pt-3 border-t border-border/70 text-center">
-              <p className="text-[11px] text-muted-foreground">
-                Prefill demo credentials:{" "}
-                <button
-                  type="button"
-                  className="font-medium text-brand-teal hover:underline"
-                  onClick={() => {
-                    setEmail("admin@demo.test");
-                    setPassword("Demo1234!");
-                  }}
-                >
-                  admin@demo.test
-                </button>{" "}
-                ·{" "}
-                <button
-                  type="button"
-                  className="font-medium text-brand-teal hover:underline"
-                  onClick={() => {
-                    setEmail("member@demo.test");
-                    setPassword("Demo1234!");
-                  }}
-                >
-                  member@demo.test
-                </button>
-              </p>
-            </div>
           </div>
         </DialogContent>
       </Dialog>
