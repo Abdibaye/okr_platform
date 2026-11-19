@@ -87,6 +87,15 @@ export interface Cycle {
   archivedAt: string | null;
   version: number;
   objectives: Objective[];
+  archivedObjectives?: Array<{
+    id: string;
+    cycleId: string;
+    title: string;
+    archivedAt: string | null;
+    canManage: boolean;
+    owner: { id: string; name: string; jobTitle: string } | null;
+    keyResultCount: number;
+  }>;
 }
 
 export interface Objective {

@@ -64,7 +64,9 @@ export async function GET() {
     if (canViewObjective(objective, viewer, accessIndex.factsFor(objective))) visibleIds.add(objective.id);
   }
   const objectiveRows = allObjectives.filter((objective) => visibleIds.has(objective.id) && !objective.archivedAt);
+  const archivedObjectiveRows = allObjectives.filter((objective) => visibleIds.has(objective.id) && Boolean(objective.archivedAt));
   const objectiveIds = objectiveRows.map((objective) => objective.id);
+  const archivedObjectiveIds = archivedObjectiveRows.map((objective) => objective.id);
   const resultRows = objectiveIds.length
     ? await database.select().from(keyResults).where(and(
       eq(keyResults.companyId, context.companyId),
@@ -72,6 +74,16 @@ export async function GET() {
       isNull(keyResults.archivedAt),
     )).orderBy(keyResults.createdAt)
     : [];
+  const archivedKrs = archivedObjectiveIds.length
+    ? await database.select({ objectiveId: keyResults.objectiveId }).from(keyResults).where(and(
+      eq(keyResults.companyId, context.companyId),
+      inArray(keyResults.objectiveId, archivedObjectiveIds),
+    ))
+    : [];
+  const archivedKrCount = new Map<string, number>();
+  for (const kr of archivedKrs) {
+    archivedKrCount.set(kr.objectiveId, (archivedKrCount.get(kr.objectiveId) ?? 0) + 1);
+  }
   const editorRows = resultRows.length
     ? await database.select({ keyResultId: keyResultEditors.keyResultId, userId: keyResultEditors.userId }).from(keyResultEditors)
       .where(inArray(keyResultEditors.keyResultId, resultRows.map((result) => result.id)))
@@ -125,9 +137,30 @@ export async function GET() {
     list.push(objective);
     objectivesByCycle.set(objective.cycleId, list);
   }
+
+  const archivedObjectives = archivedObjectiveRows.map((objective) => {
+    const facts = accessIndex.factsFor(objective);
+    return {
+      id: objective.id,
+      cycleId: objective.cycleId,
+      title: objective.title,
+      archivedAt: objective.archivedAt ? objective.archivedAt.toISOString() : null,
+      canManage: canManagePrivacy(objective, viewer, facts),
+      owner: person(objective.ownerId),
+      keyResultCount: archivedKrCount.get(objective.id) ?? 0,
+    };
+  });
+  const archivedObjectivesByCycle = new Map<string, typeof archivedObjectives>();
+  for (const objective of archivedObjectives) {
+    const list = archivedObjectivesByCycle.get(objective.cycleId) ?? [];
+    list.push(objective);
+    archivedObjectivesByCycle.set(objective.cycleId, list);
+  }
+
   const hydratedCycles = cycles.map((cycle) => ({
     ...cycle,
     objectives: objectivesByCycle.get(cycle.id) ?? [],
+    archivedObjectives: archivedObjectivesByCycle.get(cycle.id) ?? [],
   }));
   const { summaries, comparisons } = buildPeriodComparisons(hydratedCycles);
 

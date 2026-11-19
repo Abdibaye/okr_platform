@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import {
   Archive,
+  ArchiveRestore,
   CheckCircle2,
   ChevronDown,
   ChevronLeft,
@@ -94,7 +95,8 @@ export default function GoalsPage() {
   const [reviewTarget, setReviewTarget] = useState<Objective | null>(null);
   const [reviewNote, setReviewNote] = useState("");
   const [archiveTarget, setArchiveTarget] = useState<Objective | null>(null);
-  const [restoreTarget, setRestoreTarget] = useState<Objective | null>(null);
+  const [restoreTarget, setRestoreTarget] = useState<{ id: string; title: string } | null>(null);
+  const [restoreListOpen, setRestoreListOpen] = useState(false);
   const [checkIn, setCheckIn] = useState<{ keyResultId: string; correcting: CheckInEntry | null } | null>(null);
   const [historyKrId, setHistoryKrId] = useState<string | null>(null);
   const [deepLinkHandled, setDeepLinkHandled] = useState(false);
@@ -469,6 +471,15 @@ export default function GoalsPage() {
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <h2 id="goals-view-title" className="text-xl">{tabLabels[tab]}</h2>
           <div className="flex items-center gap-2">
+            {Boolean(selectedCycle?.archivedObjectives?.some((g) => g.canManage)) && (
+              <Button
+                variant="outline"
+                disabled={busy}
+                onClick={() => setRestoreListOpen(true)}
+              >
+                <ArchiveRestore aria-hidden="true" /> Restore archived goal
+              </Button>
+            )}
             <Button disabled={Boolean(createDisabledReason)} title={createDisabledReason} onClick={() => setSheet({ objective: null })}>
               <Plus aria-hidden="true" /> Create goal
             </Button>
@@ -631,12 +642,64 @@ export default function GoalsPage() {
           <DialogHeader>
             <DialogTitle>Archive goal?</DialogTitle>
             <DialogDescription>
-              “{archiveTarget?.title}” and its key results will be archived. Goals aligned to it stay in the cycle but are no longer aligned. This can't be undone here.
+              “{archiveTarget?.title}” and its key results will be archived. Goals aligned to it stay in the cycle but are no longer aligned. You can restore this goal with its key results and history at any time.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setArchiveTarget(null)}>Cancel</Button>
             <Button variant="destructive" disabled={busy} onClick={confirmArchive}>Archive goal</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={restoreListOpen} onOpenChange={setRestoreListOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Restore archived goal</DialogTitle>
+            <DialogDescription>
+              Select an archived goal to restore to this cycle with all its key results, check-in history and permissions preserved.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 max-h-72 overflow-y-auto divide-y">
+            {selectedCycle?.archivedObjectives?.filter((g) => g.canManage).map((goal) => (
+              <div key={goal.id} className="flex items-center justify-between pt-2 pb-1 gap-3">
+                <div className="min-w-0">
+                  <p className="font-medium text-sm truncate">{goal.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {goal.owner ? goal.owner.name : "Unowned"} · {goal.keyResultCount} key result{goal.keyResultCount === 1 ? "" : "s"}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => {
+                    setRestoreListOpen(false);
+                    setRestoreTarget(goal);
+                  }}
+                >
+                  <ArchiveRestore aria-hidden="true" className="size-3.5 mr-1" /> Restore
+                </Button>
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRestoreListOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={restoreTarget !== null} onOpenChange={(open) => { if (!open) setRestoreTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Restore goal?</DialogTitle>
+            <DialogDescription>
+              “{restoreTarget?.title}” and its key results, check-in history and permissions will be restored to active status in this cycle.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRestoreTarget(null)}>Cancel</Button>
+            <Button disabled={busy} onClick={confirmRestore}>Restore goal</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
