@@ -152,6 +152,7 @@ export async function GET() {
       directReportIds: memberRows.filter((member) => member.managerId === userId && member.isActive).map((member) => member.id),
     },
     company: { id: context.companyId, name: context.companyName, role: context.role },
+    workspaces: context.availableCompanies ?? [{ id: context.companyId, name: context.companyName, role: context.role }],
     members: memberRows.map((member) => ({
       id: member.id,
       name: member.name,
