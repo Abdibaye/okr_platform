@@ -15,6 +15,7 @@ import {
   loadObjectiveAccessFacts,
   parseObjectiveInput,
   replaceObjectiveAccess,
+  visibleParentLink,
   viewerFromContext,
 } from "@/server/objectives";
 import { recordAudit } from "@/server/people";
@@ -101,7 +102,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           entityId: id,
           reason: `Archived goal "${objective.title}"`,
         });
-        return { objective: archived, notified: [] };
+        return { objective: { ...archived, ...await visibleParentLink(transaction, context, archived.parentObjectiveId) }, notified: [] };
       }
 
       const next = {
@@ -114,7 +115,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       await assertActiveMembers(transaction, context.companyId, [...(input.viewerIds ?? []), ...(input.editorIds ?? [])], "People given access");
       if (input.teamId && input.teamId !== objective.teamId) await assertActiveTeam(transaction, context.companyId, input.teamId);
       if (input.parentObjectiveId && input.parentObjectiveId !== objective.parentObjectiveId) {
-        await assertValidParent(transaction, context.companyId, objective.cycleId, id, input.parentObjectiveId);
+        await assertValidParent(transaction, context.companyId, objective.cycleId, id, input.parentObjectiveId, viewer);
       }
 
       const { viewerIds, editorIds, ...fields } = input;
@@ -157,7 +158,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           recipientId: input.ownerId, objectiveId: id, goalTitle: updated.title,
         }]);
       }
-      return { objective: updated, notified };
+      return { objective: { ...updated, ...await visibleParentLink(transaction, context, updated.parentObjectiveId) }, notified };
     });
     if (isResponse(result)) return result;
     await deliverNotificationEmails(result.notified);

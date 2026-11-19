@@ -118,9 +118,12 @@ export async function GET() {
 
   const hydratedObjectives = objectiveRows.map((objective) => {
     const facts = accessIndex.factsFor(objective);
+    const parentVisible = objective.parentObjectiveId ? visibleIds.has(objective.parentObjectiveId) : false;
     const canEdit = canEditObjective(objective, viewer, facts);
     return {
       ...objective,
+      parentObjectiveId: parentVisible ? objective.parentObjectiveId : null,
+      parentRestricted: Boolean(objective.parentObjectiveId) && !parentVisible,
       owner: person(objective.ownerId),
       team: objective.teamId ? teamsById.get(objective.teamId) ?? null : null,
       access: accessIndex.accessFor(objective.id),
@@ -140,9 +143,12 @@ export async function GET() {
   });
   const hydratedArchivedObjectives = archivedObjectiveRows.map((objective) => {
     const facts = accessIndex.factsFor(objective);
+    const parentVisible = objective.parentObjectiveId ? visibleIds.has(objective.parentObjectiveId) : false;
     const canEdit = canEditObjective(objective, viewer, facts);
     return {
       ...objective,
+      parentObjectiveId: parentVisible ? objective.parentObjectiveId : null,
+      parentRestricted: Boolean(objective.parentObjectiveId) && !parentVisible,
       owner: person(objective.ownerId),
       team: objective.teamId ? teamsById.get(objective.teamId) ?? null : null,
       access: accessIndex.accessFor(objective.id),
@@ -181,7 +187,9 @@ export async function GET() {
       return context.role === "admin" || (objectiveId !== undefined && visibleIds.has(objectiveId));
     }
     return true;
-  }).slice(0, 20);
+  }).slice(0, 20)
+    // Only what the feed renders; audit details can reference goals this viewer cannot see.
+    .map((row) => ({ id: row.id, action: row.action, reason: row.reason, createdAt: row.createdAt }));
 
   return NextResponse.json({
     user: {

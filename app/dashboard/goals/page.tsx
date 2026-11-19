@@ -124,8 +124,6 @@ export default function GoalsPage() {
     return map;
   }, [cycleObjectives]);
   const memberById = useMemo(() => new Map((workspace?.members ?? []).map((member) => [member.id, member])), [workspace?.members]);
-  // Goals the viewer can see in any cycle; a parent id outside this set belongs to a goal they may not see.
-  const visibleGoalIds = useMemo(() => new Set((workspace?.cycles ?? []).flatMap((cycle) => cycle.objectives.map((objective) => objective.id))), [workspace?.cycles]);
   const cycleClosed = selectedCycle?.status === "closed";
   // Check-ins need an open cycle (drafts aren't tracked yet, closed cycles are locked).
   const checkInOpen = selectedCycle?.status === "open";
@@ -420,7 +418,7 @@ export default function GoalsPage() {
                   <span className="sr-only">Level: </span>{levelLabels[objective.level]}
                   {objective.team && <> · {objective.team.name}</>}
                   {view === "list" && parent && <> · aligned to “{parent.title}”</>}
-                  {objective.parentObjectiveId && !visibleGoalIds.has(objective.parentObjectiveId) && <> · aligned to a <span className="italic">Private goal</span></>}
+                  {objective.parentRestricted && <> · aligned to a <span className="italic">Private goal</span></>}
                   {objective.copiedFromObjectiveId && <> · carried forward</>}
                 </p>
               </div>

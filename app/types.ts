@@ -107,6 +107,7 @@ export interface Objective {
   approvalStatus: ApprovalStatus;
   visibility: GoalVisibility;
   parentObjectiveId: string | null;
+  parentRestricted: boolean;
   copiedFromObjectiveId: string | null;
   createdBy: string;
   createdAt: string;

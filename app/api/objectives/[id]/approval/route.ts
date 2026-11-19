@@ -8,6 +8,7 @@ import {
   InputError,
   loadObjectiveAccessFacts,
   notify,
+  visibleParentLink,
   viewerFromContext,
 } from "@/server/objectives";
 import { recordAudit } from "@/server/people";
@@ -108,7 +109,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           dedupKey: `approval:${id}:${updated.version}`,
         });
       }
-      return updated;
+      return { ...updated, ...await visibleParentLink(transaction, context, updated.parentObjectiveId) };
     });
     return NextResponse.json({ objective });
   } catch (error) {

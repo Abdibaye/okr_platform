@@ -11,6 +11,8 @@ import {
   InputError,
   parseObjectiveInput,
   replaceObjectiveAccess,
+  visibleParentLink,
+  viewerFromContext,
 } from "@/server/objectives";
 import { recordAudit } from "@/server/people";
 import { hasRole } from "@/server/request-context";
@@ -25,6 +27,7 @@ export async function POST(request: Request) {
 
   const actorId = context.session.user.id;
   const actorName = context.session.user.name || "Someone";
+  const viewer = viewerFromContext(context);
   const canManage = hasRole(context.role, ["admin", "manager"]);
   try {
     const input = parseObjectiveInput(body);
@@ -53,7 +56,7 @@ export async function POST(request: Request) {
       if (ownerId) await assertActiveMembers(transaction, context.companyId, [ownerId], "The goal owner");
       await assertActiveMembers(transaction, context.companyId, [...(input.viewerIds ?? []), ...(input.editorIds ?? [])], "People given access");
       if (goal.teamId) await assertActiveTeam(transaction, context.companyId, goal.teamId);
-      if (input.parentObjectiveId) await assertValidParent(transaction, context.companyId, cycleId, null, input.parentObjectiveId);
+      if (input.parentObjectiveId) await assertValidParent(transaction, context.companyId, cycleId, null, input.parentObjectiveId, viewer);
 
       const [created] = await transaction.insert(objectives).values({
         companyId: context.companyId,
@@ -86,7 +89,7 @@ export async function POST(request: Request) {
           recipientId: ownerId, objectiveId: created.id, goalTitle: created.title,
         }])
         : [];
-      return { objective: created, notified };
+      return { objective: { ...created, ...await visibleParentLink(transaction, context, created.parentObjectiveId) }, notified };
     });
     await deliverNotificationEmails(objective.notified);
     return NextResponse.json({ objective: objective.objective }, { status: 201 });
