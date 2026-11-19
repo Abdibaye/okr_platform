@@ -27,6 +27,7 @@ export function AuthScreen({ initialNotice = null }: { initialNotice?: string | 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [companyName, setCompanyName] = useState("");
   const [message, setMessage] = useState<string | null>(initialNotice);
   const [error, setError] = useState<string | null>(null);
   const [resetLink, setResetLink] = useState<string | null>(null);
@@ -47,6 +48,19 @@ export function AuthScreen({ initialNotice = null }: { initialNotice?: string | 
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.message ?? data.error ?? "Could not sign you in.");
+
+      if (mode === "signup" && companyName.trim()) {
+        try {
+          await fetch("/api/workspaces", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: companyName.trim() }),
+          });
+        } catch {
+          // Continue to dashboard if workspace creation fails; account is already created
+        }
+      }
+
       window.location.href = "/dashboard";
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not sign you in.");
@@ -332,6 +346,18 @@ export function AuthScreen({ initialNotice = null }: { initialNotice?: string | 
                       onChange={(event) => setPassword(event.target.value)}
                       autoComplete="new-password"
                       placeholder="••••••••"
+                      className="h-9 text-sm"
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="signup-company" className="text-xs">
+                      Company / Organization Name <span className="text-muted-foreground font-normal">(Optional)</span>
+                    </FieldLabel>
+                    <Input
+                      id="signup-company"
+                      value={companyName}
+                      onChange={(event) => setCompanyName(event.target.value)}
+                      placeholder="e.g. Acme Corp (leave blank for Demo)"
                       className="h-9 text-sm"
                     />
                   </Field>

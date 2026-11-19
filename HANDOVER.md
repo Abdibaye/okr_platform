@@ -12,6 +12,11 @@ This platform is a shared company goal tracker (similar to Betterworks). It help
 - Share regular progress updates with notes and blockers (**Check-ins**).
 - Keep all history safe and unalterable (**Audit Trail & Immutable History**).
 
+### Workspaces & Self-Serve Creation
+- **What is a Workspace?**: An isolated digital home for an organization (e.g., *Acme Corp* or *Demo Company*). Goals, teams, cycles, and check-ins belong strictly to their workspace.
+- **Creating a Workspace**: Users can enter a company name during sign-up or click **"+ Create New Workspace"** from the workspace switcher inside the app. The creator becomes the primary **Admin** and a starter open cycle (e.g. *Q4 2026*) is automatically created.
+- **Switching Workspaces**: If a user belongs to multiple organizations, they can click their company name in the sidebar or mobile menu to toggle between workspaces with one click.
+
 ---
 
 ## 2. Who Can See and Edit What? (Permissions Explained Simply)
