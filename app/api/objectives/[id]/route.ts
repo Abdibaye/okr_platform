@@ -2,6 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { contextOr401, errorResponse, isResponse, isUuid, readJson } from "@/server/api-utils";
 import { getDb } from "@/server/db";
+import { deliverNotificationEmails, notifyNewOwners } from "@/server/notifications";
 import {
   assertActiveMembers,
   assertActiveTeam,
@@ -42,6 +43,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (body.archived !== undefined && body.archived !== true) return errorResponse("Archived goals cannot be restored here.", 400);
 
   const actorId = context.session.user.id;
+  const actorName = context.session.user.name || "Someone";
   const viewer = viewerFromContext(context);
   try {
     const input = parseObjectiveInput(body);
@@ -49,6 +51,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (!archiving && !Object.keys(input).length) return errorResponse("Provide a change to save.", 400);
 
     const result = await getDb().transaction(async (transaction) => {
+      let notified: string[] = [];
       const [current] = await transaction.select({ objective: objectives, cycleStatus: okrCycles.status })
         .from(objectives)
         .innerJoin(okrCycles, eq(okrCycles.id, objectives.cycleId))
@@ -98,7 +101,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           entityId: id,
           reason: `Archived goal "${objective.title}"`,
         });
-        return { objective: archived };
+        return { objective: archived, notified: [] };
       }
 
       const next = {
@@ -149,10 +152,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           details: { viewerIds: viewerIds ?? null, editorIds: editorIds ?? null },
         });
       }
-      return { objective: updated };
+      if (input.ownerId && input.ownerId !== objective.ownerId) {
+        notified = await notifyNewOwners(transaction, context.companyId, actorId, actorName, `v${updated.version}`, [{
+          recipientId: input.ownerId, objectiveId: id, goalTitle: updated.title,
+        }]);
+      }
+      return { objective: updated, notified };
     });
     if (isResponse(result)) return result;
-    return NextResponse.json(result);
+    await deliverNotificationEmails(result.notified);
+    return NextResponse.json({ objective: result.objective });
   } catch (error) {
     if (error instanceof InputError) return errorResponse(error.message, error.status);
     throw error;

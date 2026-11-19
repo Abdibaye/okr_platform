@@ -51,6 +51,42 @@ export async function createNotifications(executor: Executor, entries: Notificat
   return rows.map((row) => row.id);
 }
 
+/** One goal or key result that just changed hands; its new owner is told about it. */
+export interface OwnerAssignmentNotice {
+  recipientId: string;
+  objectiveId: string;
+  goalTitle: string;
+  keyResultId?: string;
+  keyResultTitle?: string;
+}
+
+/**
+ * Notifies people who were just made the owner of a goal or key result. Self-assignments are
+ * skipped. Returns created notification ids; deliver emails with `deliverNotificationEmails`
+ * after the transaction commits.
+ */
+export async function notifyNewOwners(executor: Executor, companyId: string, actorId: string, actorName: string, eventKey: string, assignments: OwnerAssignmentNotice[]) {
+  const fresh = assignments.filter((assignment) => assignment.recipientId && assignment.recipientId !== actorId);
+  if (!fresh.length) return [];
+  return createNotifications(executor, fresh.map((assignment) => {
+    const keyResult = Boolean(assignment.keyResultId);
+    return {
+      companyId,
+      recipientId: assignment.recipientId,
+      actorId,
+      type: "assignment" as const,
+      title: keyResult ? `${actorName} assigned you a key result` : `${actorName} assigned you a goal`,
+      body: keyResult
+        ? `You now own the key result "${assignment.keyResultTitle}" on the goal "${assignment.goalTitle}".`
+        : `You now own the goal "${assignment.goalTitle}".`,
+      objectiveId: assignment.objectiveId,
+      entityType: keyResult ? "key_result" as const : "objective" as const,
+      entityId: assignment.keyResultId ?? assignment.objectiveId,
+      dedupKey: `assignment:${keyResult ? "key_result" : "objective"}:${assignment.keyResultId ?? assignment.objectiveId}:${assignment.recipientId}:${eventKey}`,
+    };
+  }));
+}
+
 function absoluteLink(path: string | null) {
   const base = process.env.BETTER_AUTH_URL;
   if (!path) return null;
