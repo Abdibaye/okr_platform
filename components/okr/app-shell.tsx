@@ -24,6 +24,7 @@ import { NotificationBell } from "@/components/okr/notification-bell";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import type { Workspace } from "@/app/types";
+import { WorkspaceSwitcher } from "@/components/okr/workspace-switcher";
 
 interface NavItem {
   id: string;
@@ -188,13 +189,12 @@ export function AppShell({
             expanded ? "w-60" : "w-[4.5rem]",
           )}
         >
-          <div className={cn("mb-6 flex items-center gap-3", !expanded && "justify-center")}>
+          <div className={cn("mb-6 flex items-center gap-2", !expanded && "justify-center")}>
             <Logo />
             {expanded && (
-              <span className="min-w-0">
-                <span className="block truncate text-sm font-semibold">{workspace.company.name}</span>
-                <span className="block truncate text-xs text-sidebar-muted">OKR workspace</span>
-              </span>
+              <div className="min-w-0 flex-1">
+                <WorkspaceSwitcher workspace={workspace} />
+              </div>
             )}
           </div>
           <button
@@ -212,19 +212,23 @@ export function AppShell({
           <SidebarFooter workspace={workspace} expanded={expanded} onSignOut={onSignOut} />
         </aside>
 
-        <header className="sticky top-0 z-40 flex items-center gap-3 bg-sidebar px-4 py-3 text-sidebar-foreground md:hidden">
-          <button
-            type="button"
-            className="rounded-md p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-            onClick={() => setDrawerOpen(true)}
-            id="mobile-navigation-toggle"
-            aria-label="Open navigation menu"
-            aria-expanded={drawerOpen}
-          >
-            <Menu className="size-5" />
-          </button>
-          <Logo />
-          <p className="min-w-0 truncate text-sm font-semibold">{workspace.company.name}</p>
+        <header className="sticky top-0 z-40 flex items-center justify-between gap-3 bg-sidebar px-4 py-2.5 text-sidebar-foreground md:hidden">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <button
+              type="button"
+              className="rounded-md p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+              onClick={() => setDrawerOpen(true)}
+              id="mobile-navigation-toggle"
+              aria-label="Open navigation menu"
+              aria-expanded={drawerOpen}
+            >
+              <Menu className="size-5" />
+            </button>
+            <Logo />
+            <div className="min-w-0 flex-1">
+              <WorkspaceSwitcher workspace={workspace} />
+            </div>
+          </div>
         </header>
 
         <div className={cn("transition-[padding] duration-200", expanded ? "md:pl-60" : "md:pl-[4.5rem]")}>
@@ -235,9 +239,11 @@ export function AppShell({
             <DialogContent showCloseButton={false} aria-describedby={undefined} onCloseAutoFocus={(event) => { event.preventDefault(); document.getElementById("mobile-navigation-toggle")?.focus(); }} className="inset-y-0 left-0 flex h-dvh w-[86%] max-w-xs translate-x-0 translate-y-0 flex-col gap-4 rounded-none border-0 bg-sidebar p-4 text-sidebar-foreground sm:max-w-xs">
               <DialogTitle className="sr-only">Navigation menu</DialogTitle>
               <div className="flex items-center justify-between">
-                <div className="flex min-w-0 items-center gap-3">
+                <div className="flex min-w-0 items-center gap-2 flex-1 pr-2">
                   <Logo />
-                  <p className="truncate text-sm font-semibold">{workspace.company.name}</p>
+                  <div className="min-w-0 flex-1">
+                    <WorkspaceSwitcher workspace={workspace} />
+                  </div>
                 </div>
                 <Button
                   variant="ghost"
