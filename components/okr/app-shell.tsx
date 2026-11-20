@@ -190,7 +190,7 @@ export function AppShell({
           )}
         >
           <div className={cn("mb-6 flex items-center gap-2", !expanded && "justify-center")}>
-            <Logo />
+            {!expanded && <Logo />}
             {expanded && (
               <div className="min-w-0 flex-1">
                 <WorkspaceSwitcher workspace={workspace} />
