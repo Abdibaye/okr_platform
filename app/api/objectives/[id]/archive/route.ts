@@ -3,6 +3,7 @@ import { contextOr401, errorResponse, isResponse } from "@/server/api-utils";
 import { getDb } from "@/server/db";
 import { archiveObjectiveAndKeyResults, loadEditableObjective } from "@/server/archive";
 import { recordAudit } from "@/server/people";
+import { clearStaleRequests } from "@/server/reminders";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
         entityId: objective.id,
         reason: `Archived goal "${objective.title}"`,
       });
+      await clearStaleRequests(transaction, context.companyId);
     });
     return NextResponse.json({ archived: true });
   } catch (error) {

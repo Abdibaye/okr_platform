@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { contextOr401, errorResponse, isResponse } from "@/server/api-utils";
 import { getDb } from "@/server/db";
 import { recordAudit } from "@/server/people";
+import { clearStaleRequests } from "@/server/reminders";
 import { okrCycles } from "@/server/schema";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +27,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       entityId: cycle.id,
       reason: `Archived cycle "${cycle.name}"`,
     });
+    await clearStaleRequests(transaction, context.companyId);
   });
   return NextResponse.json({ archived: true });
 }

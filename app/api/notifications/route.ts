@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { contextOr401, isResponse } from "@/server/api-utils";
 import { getDb } from "@/server/db";
 import { canViewObjective, loadAccessIndex, viewerFromContext } from "@/server/org-access";
+import { clearStaleRequests } from "@/server/reminders";
 import { keyResults, notifications, objectives, user } from "@/server/schema";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +16,7 @@ export async function GET() {
   if (isResponse(context)) return context;
   const database = getDb();
   const userId = context.session.user.id;
+  await clearStaleRequests(database, context.companyId);
   const mine = and(eq(notifications.companyId, context.companyId), eq(notifications.recipientId, userId));
 
   const rows = await database.select({ notification: notifications, actorName: user.name })

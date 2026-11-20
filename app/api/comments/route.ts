@@ -5,7 +5,7 @@ import { getDb } from "@/server/db";
 import { createNotifications, deliverNotificationEmails } from "@/server/notifications";
 import { canViewObjective, loadVisibleObjective, viewerFromChart, type ObjectiveAccessFacts } from "@/server/org-access";
 import type { RequestContext } from "@/server/request-context";
-import { companyMemberships, goalComments, keyResults, objectives, user } from "@/server/schema";
+import { companyMemberships, goalComments, keyResults, objectives, okrCycles, user } from "@/server/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -71,6 +71,16 @@ export async function GET(request: Request) {
   const target = await loadTarget(context, url.searchParams.get("objectiveId"), url.searchParams.get("keyResultId"));
   if (!target) return errorResponse(NOT_FOUND, 404);
 
+  const [cycle] = await getDb().select({
+    id: okrCycles.id,
+    status: okrCycles.status,
+    archivedAt: okrCycles.archivedAt,
+  }).from(okrCycles).where(and(
+    eq(okrCycles.id, target.objective.cycleId),
+    eq(okrCycles.companyId, context.companyId),
+  )).limit(1);
+  const cycleClosed = !cycle || cycle.status === "closed" || Boolean(cycle.archivedAt);
+
   const conditions = [eq(goalComments.companyId, context.companyId), eq(goalComments.objectiveId, target.objective.id)];
   if (target.keyResult) conditions.push(eq(goalComments.keyResultId, target.keyResult.id));
   const rows = await getDb().select({ comment: goalComments, authorName: user.name })
@@ -93,7 +103,8 @@ export async function GET(request: Request) {
       createdAt: comment.createdAt,
     })),
     // Emails are left out: the picker inserts @[id] tokens, so members never see colleagues' addresses.
-    mentionable: people.filter((person) => person.id !== context.session.user.id).map(({ id, name, jobTitle }) => ({ id, name, jobTitle })),
+    mentionable: cycleClosed ? [] : people.filter((person) => person.id !== context.session.user.id).map(({ id, name, jobTitle }) => ({ id, name, jobTitle })),
+    cycleClosed,
   }, { headers: { "Cache-Control": "no-store" } });
 }
 
@@ -105,6 +116,19 @@ export async function POST(request: Request) {
   if (!text || text.length > MAX_BODY) return errorResponse(`Comments must be 1–${MAX_BODY.toLocaleString("en-US")} characters.`, 400);
   const target = await loadTarget(context, body?.objectiveId, body?.keyResultId);
   if (!target) return errorResponse(NOT_FOUND, 404);
+
+  const [cycle] = await getDb().select({
+    id: okrCycles.id,
+    status: okrCycles.status,
+    archivedAt: okrCycles.archivedAt,
+  }).from(okrCycles).where(and(
+    eq(okrCycles.id, target.objective.cycleId),
+    eq(okrCycles.companyId, context.companyId),
+  )).limit(1);
+
+  if (!cycle || cycle.status === "closed" || cycle.archivedAt) {
+    return errorResponse("Comments cannot be added to a closed cycle.", 400);
+  }
 
   const authorId = context.session.user.id;
   const people = await mentionablePeople(context, target.objective, target.facts);

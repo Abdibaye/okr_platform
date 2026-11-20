@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { contextOr401, errorResponse, isResponse, isUuid, readJson } from "@/server/api-utils";
 import { hasRole } from "@/server/request-context";
 import { getDb } from "@/server/db";
+import { clearStaleRequests } from "@/server/reminders";
 import { auditLogs, okrCycles } from "@/server/schema";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -64,6 +65,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       reason,
       details: finalReflection !== undefined ? { finalReflectionLength: finalReflection.length } : {},
     });
+    await clearStaleRequests(transaction, context.companyId);
     return updated;
   });
 
