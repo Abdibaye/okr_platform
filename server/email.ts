@@ -62,7 +62,11 @@ export async function sendEmail(message: EmailMessage): Promise<EmailResult> {
         body: JSON.stringify({ from: process.env.EMAIL_FROM || null, to: message.to, subject: message.subject, text: message.text, html }),
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
-    if (!response.ok) return { status: "failed", error: `Email delivery failed (${response.status})` };
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null) as { message?: string; error?: string } | null;
+      const detail = (payload?.message || payload?.error) ? `: ${payload.message || payload.error}` : ` (${response.status})`;
+      return { status: "failed", error: `Email delivery failed${detail}`.slice(0, 500) };
+    }
     return { status: "sent" };
   } catch (error) {
     return { status: "failed", error: describeFailure(error) };
