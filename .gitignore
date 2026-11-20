@@ -1,7 +1,5 @@
 .git
 .neander-creation.json*
-.env
-.env.*
 !.env.example
 **/node_modules
 **/.next
@@ -10,3 +8,4 @@
 **/__pycache__
 **/.pytest_cache
 **/*.tsbuildinfo
+config.bat
