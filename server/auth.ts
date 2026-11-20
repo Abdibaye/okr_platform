@@ -4,6 +4,7 @@ import { and, desc, eq, gt } from "drizzle-orm";
 import { getDb } from "./db";
 import { acceptInvitation } from "./people";
 import { companies, companyMemberships, invitations } from "./schema";
+import { senderAddress } from "./email";
 
 export const demoCompanyId = "6e2c4a1e-89a1-4d57-9c37-832473fd28d6";
 
@@ -38,7 +39,7 @@ async function deliverResetPasswordEmail(email: string, url: string) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: process.env.EMAIL_FROM || "Neander <no-reply@apps.neander.ai>",
+        from: senderAddress(),
         to: [email],
         subject: "Reset your Alineo password",
         text: `Reset your password using this link: ${url}`,
