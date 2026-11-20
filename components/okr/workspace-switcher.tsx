@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Building2, Check, ChevronsUpDown, Loader2, Plus } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2, Plus } from "lucide-react";
 import type { Workspace } from "@/app/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -99,18 +99,10 @@ export function WorkspaceSwitcher({ workspace, onWorkspaceSwitched, className }:
             className="flex w-full items-center justify-between gap-2 rounded-lg p-1.5 text-left transition-colors hover:bg-sidebar-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring group"
             title="Switch or create workspace"
           >
-            <div className="flex min-w-0 items-center gap-2.5">
-              <div className="grid size-7 shrink-0 place-items-center rounded-md bg-brand-teal/15 text-brand-teal">
-                <Building2 className="size-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold leading-tight text-sidebar-foreground group-hover:text-brand-teal transition-colors">
-                  {currentCompany.name}
-                </p>
-                <p className="truncate text-[11px] capitalize text-sidebar-muted">
-                  {currentCompany.role} · Alineo workspace
-                </p>
-              </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold leading-tight text-sidebar-foreground group-hover:text-brand-teal transition-colors">
+                {currentCompany.name}
+              </p>
             </div>
             <ChevronsUpDown className="size-4 shrink-0 text-sidebar-muted group-hover:text-sidebar-foreground" />
           </button>
