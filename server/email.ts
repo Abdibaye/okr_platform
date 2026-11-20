@@ -28,6 +28,43 @@ export function emailProvider(): "resend" | "webhook" | null {
   return null;
 }
 
+export function senderAddress(): string {
+  const fallback = "Neander <no-reply@apps.neander.ai>";
+  const raw = process.env.EMAIL_FROM;
+  if (!raw) return fallback;
+  let val = String(raw).trim();
+  // Unescape any HTML entities if dashboard or shell escaped angle brackets
+  val = val.replaceAll("&lt;", "<").replaceAll("&gt;", ">");
+  // Strip outer quotes or escaped quotes
+  val = val.replace(/^["'\\]+|["'\\]+$/g, "").trim();
+  val = val.replace(/^\\["']+|\\["']+$/g, "").trim();
+
+  // If format is "Name <email@domain.com>" or "<email@domain.com>"
+  const bracketMatch = val.match(/^(.*?)\s*<([^\s>]+)>$/);
+  if (bracketMatch) {
+    const name = bracketMatch[1].trim().replace(/^["'\\]+|["'\\]+$/g, "").trim();
+    const email = bracketMatch[2].trim().replace(/^["'\\]+|["'\\]+$/g, "").trim();
+    if (/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(email)) {
+      return name ? `${name} <${email}>` : email;
+    }
+  }
+
+  // If format is "Name email@domain.com" without brackets
+  const spaceMatch = val.match(/^(.*?)\s+([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})$/);
+  if (spaceMatch) {
+    const name = spaceMatch[1].trim().replace(/^["'\\]+|["'\\]+$/g, "").trim();
+    const email = spaceMatch[2].trim();
+    return `${name} <${email}>`;
+  }
+
+  // If format is plain "email@domain.com"
+  if (/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(val)) {
+    return val;
+  }
+
+  return fallback;
+}
+
 function describeFailure(error: unknown) {
   if (error instanceof Error) {
     if (error.name === "TimeoutError") return "Email provider timed out";
@@ -48,7 +85,7 @@ export async function sendEmail(message: EmailMessage): Promise<EmailResult> {
         method: "POST",
         headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          from: process.env.EMAIL_FROM || "Neander <no-reply@apps.neander.ai>",
+          from: senderAddress(),
           to: [message.to],
           subject: message.subject,
           text: message.text,
@@ -59,7 +96,7 @@ export async function sendEmail(message: EmailMessage): Promise<EmailResult> {
       : await fetch(process.env.TRANSACTIONAL_EMAIL_WEBHOOK_URL!, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ from: process.env.EMAIL_FROM || null, to: message.to, subject: message.subject, text: message.text, html }),
+        body: JSON.stringify({ from: senderAddress(), to: message.to, subject: message.subject, text: message.text, html }),
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
     if (!response.ok) {
