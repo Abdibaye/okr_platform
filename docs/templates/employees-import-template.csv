@@ -1,0 +1,8 @@
+email,name,role,manager_email,team_name,job_title,status
+ceo@company.test,Eleanor Vance,admin,,Executive,Chief Executive Officer,active
+vp.eng@company.test,Marcus Brody,manager,ceo@company.test,Engineering,VP of Engineering,active
+lead.dev@company.test,Sophia Chen,member,vp.eng@company.test,Engineering,Staff Software Engineer,active
+vp.product@company.test,David Kim,manager,ceo@company.test,Product,VP of Product,active
+pm.growth@company.test,Amina Idris,member,vp.product@company.test,Product,Senior Product Manager,active
+head.sales@company.test,Rachel Green,manager,ceo@company.test,Sales,Head of Global Sales,active
+ae.enterprise@company.test,Lucas Miller,member,head.sales@company.test,Sales,Account Executive,active

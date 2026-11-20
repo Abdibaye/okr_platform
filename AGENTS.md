@@ -11,6 +11,21 @@ When adding database/auth capabilities, merge the block's complete `.neander/com
 
 When installing Better Auth, use the pinned `auth` CLI to generate `server/auth-schema.ts`; do not hand-author its tables. Export that schema from `server/schema.ts`, then use Drizzle Kit to generate and commit the SQL migration. Do not use `auth migrate` with the Drizzle adapter. Apply the committed migration before running `.neander/check-auth.mjs`; that script verifies runtime behavior only.
 
+## Development setup
+
+Runtime is pinned in `mise.toml`: Node 24 and pnpm 11.18.0. If the shell cannot find `node` or `pnpm`, activate the machine's Node 24 (for example an nvm-managed `~/.nvm/versions/node/<24.x>/bin`) on `PATH` before running these commands; `pnpm` here is a corepack shim that invokes `node` by shebang.
+
+Required environment (gitignored `.env.local`, never commit real values): `DATABASE_URL`, `BETTER_AUTH_SECRET`, and optional `RESEND_API_KEY` + `EMAIL_FROM` for transactional email (without them notifications stay in-app only).
+
+From the repository root:
+
+- `pnpm install --frozen-lockfile` — install dependencies.
+- `pnpm db:migrate` — apply Drizzle migrations (`node --env-file=.env.local .neander/migrate.mjs`).
+- `pnpm db:seed` — seed demo data (`admin@demo.test` / `member@demo.test`, password `Demo1234!`). Only seed an empty database; it is idempotent per user email.
+- `pnpm dev` — Next.js dev server at http://127.0.0.1:3000.
+- `pnpm check` — TypeScript check (`tsc --noEmit`).
+- `pnpm build` — production standalone build.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know

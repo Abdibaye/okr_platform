@@ -1,0 +1,5 @@
+# Runtime pins for humans, CI, and mise-compatible tooling.
+# Managed by this repository; see README.md for the authoritative versions.
+[tools]
+node = "24.22.0"
+pnpm = "11.18.0"
