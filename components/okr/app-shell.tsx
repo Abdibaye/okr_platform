@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BarChart3,
   CalendarRange,
   ChevronsLeft,
   ChevronsRight,
@@ -38,6 +39,7 @@ const navItems: NavItem[] = [
   { id: "home", href: "/dashboard", label: "Home", icon: Home },
   { id: "goals", href: "/dashboard/goals", label: "Goals", icon: Target },
   { id: "cycles", href: "/dashboard/cycles", label: "Cycles", icon: CalendarRange },
+  { id: "reports", href: "/dashboard/reports", label: "Reports", icon: BarChart3 },
   { id: "insights", href: "/dashboard/insights", label: "Insights", icon: TrendingUp },
   { id: "activity", href: "/dashboard/activity", label: "Activity", icon: History },
   { id: "team", href: "/dashboard/team", label: "Team", icon: Users, managersOnly: true },
