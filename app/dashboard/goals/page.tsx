@@ -56,9 +56,10 @@ import { cn } from "@/lib/utils";
 const ALL = "all";
 const ARCHIVED = "archived";
 
-type GoalTab = "mine" | "reports" | "team" | "company";
+type GoalTab = "all" | "mine" | "reports" | "team" | "company";
 
 const tabLabels: Record<GoalTab, string> = {
+  all: "All Goals",
   mine: "My Goals",
   reports: "My Direct Reports",
   team: "My Team",
