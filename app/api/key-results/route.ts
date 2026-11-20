@@ -2,6 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { contextOr401, errorResponse, isResponse, isUuid, readJson } from "@/server/api-utils";
 import { getDb } from "@/server/db";
+import { deliverNotificationEmails, notifyNewOwners } from "@/server/notifications";
 import { keyResults, krCheckIns, objectives, okrCycles } from "@/server/schema";
 import { calculateProgress } from "@/server/okr-math";
 import { refreshObjectiveProgress, todayWithinCycle } from "@/server/okr-mutations";
@@ -25,6 +26,7 @@ export async function POST(request: Request) {
   if (!body || !isUuid(objectiveId)) return errorResponse("Provide a key result title and valid goal.", 400);
 
   const actorId = context.session.user.id;
+  const actorName = context.session.user.name || "Someone";
   try {
     const input = parseKeyResultInput(body);
     if (!input.title) throw new InputError("Provide a key result title.");
@@ -39,7 +41,7 @@ export async function POST(request: Request) {
       throw new InputError(error instanceof Error ? error.message : "Invalid key result values.");
     }
 
-    const keyResult = await getDb().transaction(async (transaction) => {
+    const result = await getDb().transaction(async (transaction) => {
       const [row] = await transaction.select({ objective: objectives, cycleStatus: okrCycles.status, cycleStartDate: okrCycles.startDate, cycleEndDate: okrCycles.endDate })
         .from(objectives)
         .innerJoin(okrCycles, eq(okrCycles.id, objectives.cycleId))
@@ -102,9 +104,15 @@ export async function POST(request: Request) {
         reason: `Added key result "${created.title}" to "${row.objective.title}"`,
         details: { objectiveId, baseline: created.baseline, target: created.target, ownerId },
       });
-      return withCheckIn;
+      const notified = ownerId
+        ? await notifyNewOwners(transaction, context.companyId, actorId, actorName, "created", [{
+          recipientId: ownerId, objectiveId, goalTitle: row.objective.title, keyResultId: created.id, keyResultTitle: created.title,
+        }])
+        : [];
+      return { keyResult: withCheckIn, notified };
     });
-    return NextResponse.json({ keyResult }, { status: 201 });
+    await deliverNotificationEmails(result.notified);
+    return NextResponse.json({ keyResult: result.keyResult }, { status: 201 });
   } catch (error) {
     if (error instanceof InputError) return errorResponse(error.message, error.status);
     throw error;

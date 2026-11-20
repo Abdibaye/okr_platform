@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import {
   Archive,
+  ArchiveRestore,
   CheckCircle2,
   ChevronDown,
   ChevronLeft,
@@ -19,6 +20,7 @@ import {
   Network,
   Pencil,
   Plus,
+  RotateCcw,
   Search,
   Send,
   Target,
@@ -52,10 +54,12 @@ import type { CheckInEntry, GoalStatus, KeyResult, Objective } from "@/app/types
 import { cn } from "@/lib/utils";
 
 const ALL = "all";
+const ARCHIVED = "archived";
 
-type GoalTab = "mine" | "reports" | "team" | "company";
+type GoalTab = "all" | "mine" | "reports" | "team" | "company";
 
 const tabLabels: Record<GoalTab, string> = {
+  all: "All Goals",
   mine: "My Goals",
   reports: "My Direct Reports",
   team: "My Team",
@@ -94,7 +98,8 @@ export default function GoalsPage() {
   const [reviewTarget, setReviewTarget] = useState<Objective | null>(null);
   const [reviewNote, setReviewNote] = useState("");
   const [archiveTarget, setArchiveTarget] = useState<Objective | null>(null);
-  const [restoreTarget, setRestoreTarget] = useState<Objective | null>(null);
+  const [restoreTarget, setRestoreTarget] = useState<{ id: string; title: string } | null>(null);
+  const [restoreListOpen, setRestoreListOpen] = useState(false);
   const [checkIn, setCheckIn] = useState<{ keyResultId: string; correcting: CheckInEntry | null } | null>(null);
   const [historyKrId, setHistoryKrId] = useState<string | null>(null);
   const [deepLinkHandled, setDeepLinkHandled] = useState(false);
@@ -105,7 +110,14 @@ export default function GoalsPage() {
   );
   const cycleIndex = cycles.findIndex((cycle) => cycle.id === selectedCycle?.id);
   const cycleObjectives = useMemo(() => selectedCycle?.objectives ?? [], [selectedCycle]);
-  const objectiveById = useMemo(() => new Map(cycleObjectives.map((objective) => [objective.id, objective])), [cycleObjectives]);
+  const archivedObjectives = useMemo(
+    () => (workspace?.archivedObjectives ?? []).filter((objective) => objective.cycleId === selectedCycle?.id),
+    [workspace?.archivedObjectives, selectedCycle?.id],
+  );
+  const objectiveById = useMemo(
+    () => new Map([...cycleObjectives, ...archivedObjectives].map((objective) => [objective.id, objective])),
+    [archivedObjectives, cycleObjectives],
+  );
   const childrenByParent = useMemo(() => {
     const map = new Map<string, Objective[]>();
     for (const objective of cycleObjectives) {
@@ -115,8 +127,6 @@ export default function GoalsPage() {
     return map;
   }, [cycleObjectives]);
   const memberById = useMemo(() => new Map((workspace?.members ?? []).map((member) => [member.id, member])), [workspace?.members]);
-  // Goals the viewer can see in any cycle; a parent id outside this set belongs to a goal they may not see.
-  const visibleGoalIds = useMemo(() => new Set((workspace?.cycles ?? []).flatMap((cycle) => cycle.objectives.map((objective) => objective.id))), [workspace?.cycles]);
   const cycleClosed = selectedCycle?.status === "closed";
   // Check-ins need an open cycle (drafts aren't tracked yet, closed cycles are locked).
   const checkInOpen = selectedCycle?.status === "open";
@@ -160,7 +170,8 @@ export default function GoalsPage() {
     const reports = new Set(user.directReportIds);
     const myTeams = new Set(user.teamIds);
     const query = search.trim().toLowerCase();
-    return cycleObjectives.filter((objective) => {
+    const archivedSelected = statusFilter === ARCHIVED;
+    return (archivedSelected ? archivedObjectives : cycleObjectives).filter((objective) => {
       if (tab === "mine" && objective.ownerId !== user.id) return false;
       if (tab === "reports" && !(objective.ownerId && reports.has(objective.ownerId))) return false;
       if (tab === "team") {
@@ -170,13 +181,13 @@ export default function GoalsPage() {
       }
       if (tab === "company" && objective.level !== "company") return false;
       if (ownerFilter !== ALL && objective.ownerId !== ownerFilter) return false;
-      if (statusFilter === "pending_approval") {
+      if (!archivedSelected && statusFilter === "pending_approval") {
         if (objective.approvalStatus !== "pending") return false;
-      } else if (statusFilter !== ALL && objective.status !== statusFilter) return false;
+      } else if (!archivedSelected && statusFilter !== ALL && objective.status !== statusFilter) return false;
       if (query && !objective.title.toLowerCase().includes(query) && !objective.keyResults.some((keyResult) => keyResult.title.toLowerCase().includes(query))) return false;
       return true;
     });
-  }, [workspace, cycleObjectives, tab, ownerFilter, statusFilter, search, memberById]);
+  }, [workspace, archivedObjectives, cycleObjectives, tab, ownerFilter, statusFilter, search, memberById]);
 
   // Tree view nests matching goals under a matching parent; list view shows every match flat.
   const topLevel = useMemo(() => {
@@ -304,6 +315,11 @@ export default function GoalsPage() {
               </DropdownMenuItem>
             </>
           )}
+          {Boolean(objective.archivedAt) && objective.canManage && (
+            <DropdownMenuItem disabled={busy} onSelect={() => setRestoreTarget(objective)}>
+              <RotateCcw /> Restore
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     );
@@ -405,7 +421,7 @@ export default function GoalsPage() {
                   <span className="sr-only">Level: </span>{levelLabels[objective.level]}
                   {objective.team && <> · {objective.team.name}</>}
                   {view === "list" && parent && <> · aligned to “{parent.title}”</>}
-                  {objective.parentObjectiveId && !visibleGoalIds.has(objective.parentObjectiveId) && <> · aligned to a <span className="italic">Private goal</span></>}
+                  {objective.parentRestricted && <> · aligned to a <span className="italic">Private goal</span></>}
                   {objective.copiedFromObjectiveId && <> · carried forward</>}
                 </p>
               </div>
@@ -418,6 +434,7 @@ export default function GoalsPage() {
           <TableCell>
             <div className="flex flex-wrap gap-1">
               <Badge variant={objective.status === "active" ? "default" : objective.status === "cancelled" ? "destructive" : "outline"}>{statusLabels[objective.status]}</Badge>
+              {objective.archivedAt && <Badge variant="outline">Archived</Badge>}
               <ApprovalBadge objective={objective} />
             </div>
           </TableCell>
@@ -469,6 +486,15 @@ export default function GoalsPage() {
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <h2 id="goals-view-title" className="text-xl">{tabLabels[tab]}</h2>
           <div className="flex items-center gap-2">
+            {Boolean(selectedCycle?.archivedObjectives?.some((g) => g.canManage)) && (
+              <Button
+                variant="outline"
+                disabled={busy}
+                onClick={() => setRestoreListOpen(true)}
+              >
+                <ArchiveRestore aria-hidden="true" /> Restore archived goal
+              </Button>
+            )}
             <Button disabled={Boolean(createDisabledReason)} title={createDisabledReason} onClick={() => setSheet({ objective: null })}>
               <Plus aria-hidden="true" /> Create goal
             </Button>
@@ -526,6 +552,7 @@ export default function GoalsPage() {
                 <SelectItem value={ALL}>All statuses</SelectItem>
                 {(Object.keys(statusLabels) as GoalStatus[]).map((status) => <SelectItem key={status} value={status}>{statusLabels[status]}</SelectItem>)}
                 <SelectItem value="pending_approval">Awaiting approval</SelectItem>
+                <SelectItem value={ARCHIVED}>Archived</SelectItem>
               </SelectContent>
             </Select>
             <div className="relative xl:w-64">
@@ -561,7 +588,7 @@ export default function GoalsPage() {
               {!pageRows.length && (
                 <TableRow>
                   <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
-                    {!selectedCycle ? "No cycle yet." : cycleObjectives.length ? "No goals match this view and filters." : "No goals in this cycle yet."}
+                    {!selectedCycle ? "No cycle yet." : cycleObjectives.length || archivedObjectives.length ? "No goals match this view and filters." : "No goals in this cycle yet."}
                   </TableCell>
                 </TableRow>
               )}
@@ -631,12 +658,66 @@ export default function GoalsPage() {
           <DialogHeader>
             <DialogTitle>Archive goal?</DialogTitle>
             <DialogDescription>
-              “{archiveTarget?.title}” and its key results will be archived. Goals aligned to it stay in the cycle but are no longer aligned. This can't be undone here.
+              “{archiveTarget?.title}” and its key results will be archived. Goals aligned to it stay in the cycle but are no longer aligned. You can restore this goal with its key results and history at any time.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setArchiveTarget(null)}>Cancel</Button>
             <Button variant="destructive" disabled={busy} onClick={confirmArchive}>Archive goal</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={restoreListOpen} onOpenChange={setRestoreListOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Restore archived goal</DialogTitle>
+            <DialogDescription>
+              Select an archived goal to restore to this cycle with all its key results, check-in history and permissions preserved.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 max-h-72 overflow-y-auto divide-y">
+            {archivedObjectives.filter((g) => g.canManage).map((goal) => (
+              <div key={goal.id} className="flex items-center justify-between pt-2 pb-1 gap-3">
+                <div className="min-w-0">
+                  <p className="font-medium text-sm truncate">{goal.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {goal.owner ? goal.owner.name : "Unowned"} · {goal.keyResults.length} key result{goal.keyResults.length === 1 ? "" : "s"}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => {
+                    setRestoreListOpen(false);
+                    setRestoreTarget(goal);
+                  }}
+                >
+                  <ArchiveRestore aria-hidden="true" className="size-3.5 mr-1" /> Restore
+                </Button>
+              </div>
+            ))}
+            {!archivedObjectives.filter((g) => g.canManage).length && (
+              <p className="text-sm text-muted-foreground py-4 text-center">No archived goals available to restore.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRestoreListOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={restoreTarget !== null} onOpenChange={(open) => { if (!open) setRestoreTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Restore goal?</DialogTitle>
+            <DialogDescription>
+              “{restoreTarget?.title}” and its key results, check-in history and permissions will be restored to active status in this cycle.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRestoreTarget(null)}>Cancel</Button>
+            <Button disabled={busy} onClick={confirmRestore}>Restore goal</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

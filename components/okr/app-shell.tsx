@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BarChart3,
   CalendarRange,
   ChevronsLeft,
   ChevronsRight,
@@ -38,6 +39,7 @@ const navItems: NavItem[] = [
   { id: "home", href: "/dashboard", label: "Home", icon: Home },
   { id: "goals", href: "/dashboard/goals", label: "Goals", icon: Target },
   { id: "cycles", href: "/dashboard/cycles", label: "Cycles", icon: CalendarRange },
+  { id: "reports", href: "/dashboard/reports", label: "Reports", icon: BarChart3 },
   { id: "insights", href: "/dashboard/insights", label: "Insights", icon: TrendingUp },
   { id: "activity", href: "/dashboard/activity", label: "Activity", icon: History },
   { id: "team", href: "/dashboard/team", label: "Team", icon: Users, managersOnly: true },
@@ -190,7 +192,7 @@ export function AppShell({
           )}
         >
           <div className={cn("mb-6 flex items-center gap-2", !expanded && "justify-center")}>
-            <Logo />
+            {!expanded && <Logo />}
             {expanded && (
               <div className="min-w-0 flex-1">
                 <WorkspaceSwitcher workspace={workspace} />
@@ -236,31 +238,31 @@ export function AppShell({
         </div>
 
         <Dialog open={drawerOpen} onOpenChange={setDrawerOpen}>
-          <DialogContent showCloseButton={false} aria-describedby={undefined} onCloseAutoFocus={(event) => { event.preventDefault(); document.getElementById("mobile-navigation-toggle")?.focus(); }} className="inset-y-0 left-0 flex h-dvh w-[86%] max-w-xs translate-x-0 translate-y-0 flex-col gap-4 rounded-none border-0 bg-sidebar p-4 text-sidebar-foreground sm:max-w-xs">
-            <DialogTitle className="sr-only">Navigation menu</DialogTitle>
-            <div className="flex items-center justify-between">
-              <div className="flex min-w-0 items-center gap-2 flex-1 pr-2">
-                <Logo />
-                <div className="min-w-0 flex-1">
-                  <WorkspaceSwitcher workspace={workspace} />
+            <DialogContent showCloseButton={false} aria-describedby={undefined} onCloseAutoFocus={(event) => { event.preventDefault(); document.getElementById("mobile-navigation-toggle")?.focus(); }} className="inset-y-0 left-0 flex h-dvh w-[86%] max-w-xs translate-x-0 translate-y-0 flex-col gap-4 rounded-none border-0 bg-sidebar p-4 text-sidebar-foreground sm:max-w-xs">
+              <DialogTitle className="sr-only">Navigation menu</DialogTitle>
+              <div className="flex items-center justify-between">
+                <div className="flex min-w-0 items-center gap-2 flex-1 pr-2">
+                  <Logo />
+                  <div className="min-w-0 flex-1">
+                    <WorkspaceSwitcher workspace={workspace} />
+                  </div>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                  onClick={() => setDrawerOpen(false)}
+                  aria-label="Close navigation menu"
+                  autoFocus
+                >
+                  <X className="size-5" />
+                </Button>
               </div>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                onClick={() => setDrawerOpen(false)}
-                aria-label="Close navigation menu"
-                autoFocus
-              >
-                <X className="size-5" />
-              </Button>
-            </div>
-            <nav aria-label="Mobile navigation" className="flex-1 overflow-y-auto">
-              <NavList items={items} expanded onNavigate={() => setDrawerOpen(false)} />
-            </nav>
-            <SidebarFooter workspace={workspace} expanded onSignOut={onSignOut} onNavigate={() => setDrawerOpen(false)} />
-          </DialogContent>
+              <nav aria-label="Mobile navigation" className="flex-1 overflow-y-auto">
+                <NavList items={items} expanded onNavigate={() => setDrawerOpen(false)} />
+              </nav>
+              <SidebarFooter workspace={workspace} expanded onSignOut={onSignOut} onNavigate={() => setDrawerOpen(false)} />
+            </DialogContent>
         </Dialog>
       </div>
     </TooltipProvider>

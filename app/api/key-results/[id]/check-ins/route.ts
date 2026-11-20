@@ -179,6 +179,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       // A fresh check-in answers any open "please check in" nudges for this key result.
       await resolveNotifications(transaction, context.companyId, id, ["check_in_cadence", "check_in_request"]);
       await resolveNotifications(transaction, context.companyId, objective.id, ["check_in_request"]);
+      await resolveNotifications(transaction, context.companyId, context.session.user.id, ["check_in_request"]);
       return {
         keyResult: recomputed.keyResult,
         checkIn: { ...checkIn, isCurrentEffective: recomputed.effectiveCheckIn?.id === checkIn.id },

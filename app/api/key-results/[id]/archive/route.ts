@@ -5,6 +5,7 @@ import { getDb } from "@/server/db";
 import { loadEditableKeyResult } from "@/server/archive";
 import { refreshObjectiveProgress } from "@/server/okr-mutations";
 import { recordAudit } from "@/server/people";
+import { clearStaleRequests } from "@/server/reminders";
 import { keyResults } from "@/server/schema";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +27,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
         entityId: keyResult.id,
         reason: `Archived key result "${keyResult.title}"`,
       });
+      await clearStaleRequests(transaction, context.companyId);
     });
     return NextResponse.json({ archived: true });
   } catch (error) {

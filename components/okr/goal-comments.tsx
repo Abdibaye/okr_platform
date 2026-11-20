@@ -31,10 +31,12 @@ function CommentBody({ body, names }: { body: string; names: Map<string, string>
  * Discussion on a goal. Typing `@` suggests only people who can already see the goal (the server
  * enforces the same rule), and the chosen names are sent as `@[id]` tokens so emails stay private.
  */
-export function GoalComments({ objectiveId }: { objectiveId: string }) {
+export function GoalComments({ objectiveId, cycleClosed: cycleClosedProp, closed }: { objectiveId: string; cycleClosed?: boolean; closed?: boolean }) {
   const [comments, setComments] = useState<GoalComment[]>([]);
   const [mentionable, setMentionable] = useState<PersonSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cycleClosedState, setCycleClosedState] = useState(cycleClosedProp ?? false);
+  const isClosed = Boolean(cycleClosedProp || cycleClosedState);
   const [text, setText] = useState("");
   const [picked, setPicked] = useState<PersonSummary[]>([]);
   const [query, setQuery] = useState<string | null>(null);
@@ -53,6 +55,9 @@ export function GoalComments({ objectiveId }: { objectiveId: string }) {
     const data = await response.json();
     setComments(data.comments ?? []);
     setMentionable(data.mentionable ?? []);
+    if (typeof data.cycleClosed === "boolean") {
+      setCycleClosedState(data.cycleClosed);
+    }
   }, [objectiveId]);
 
   useEffect(() => {
@@ -126,6 +131,10 @@ export function GoalComments({ objectiveId }: { objectiveId: string }) {
   }
 
   async function post() {
+    if (isClosed) {
+      setMessage({ tone: "error", text: "Comments cannot be added to a closed cycle." });
+      return;
+    }
     const trimmed = text.trim();
     if (!trimmed || posting) return;
     // Longest names first so "@Ann Lee" is not swallowed by "@Ann".
@@ -175,51 +184,57 @@ export function GoalComments({ objectiveId }: { objectiveId: string }) {
         <p className="text-sm text-muted-foreground">No comments yet. Start the conversation.</p>
       )}
 
-      <div className="relative space-y-2">
-        <Label htmlFor={`comment-${objectiveId}`}>Add a comment</Label>
-        <Textarea
-          id={`comment-${objectiveId}`}
-          ref={textareaRef}
-          value={text}
-          maxLength={MAX_BODY}
-          placeholder="Share an update. Type @ to mention someone who can see this goal."
-          onChange={onChange}
-          onKeyDown={onKeyDown}
-          onBlur={() => window.setTimeout(() => setQuery(null), 150)}
-          role="combobox"
-          aria-expanded={suggestions.length > 0}
-          aria-controls={`comment-${objectiveId}-mentions`}
-          aria-autocomplete="list"
-          aria-activedescendant={suggestions.length ? `comment-${objectiveId}-mention-${suggestions[active]?.id}` : undefined}
-        />
-        {suggestions.length > 0 && (
-          <ul id={`comment-${objectiveId}-mentions`} role="listbox" aria-label="People who can see this goal" className="absolute inset-x-0 z-10 max-h-56 overflow-y-auto rounded-md border bg-popover p-1 shadow-md">
-            {suggestions.map((person, index) => (
-              <li
-                key={person.id}
-                id={`comment-${objectiveId}-mention-${person.id}`}
-                role="option"
-                aria-selected={index === active}
-                onMouseDown={(event) => { event.preventDefault(); choose(person); }}
-                className={cn("flex cursor-pointer items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-sm", index === active && "bg-accent")}
-              >
-                <span className="truncate">{person.name}</span>
-                {person.jobTitle && <span className="truncate text-xs text-muted-foreground">{person.jobTitle}</span>}
-              </li>
-            ))}
-          </ul>
-        )}
-        {query !== null && !suggestions.length && mentionable.length > 0 && (
-          <p className="text-xs text-muted-foreground">No one who can see this goal matches “{query}”.</p>
-        )}
-        {message && <p role={message.tone === "error" ? "alert" : "status"} className={cn("text-xs", message.tone === "error" ? "text-destructive" : "text-muted-foreground")}>{message.text}</p>}
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-xs text-muted-foreground">Ctrl/⌘ + Enter to post</p>
-          <Button type="button" size="sm" onClick={() => void post()} disabled={posting || !text.trim()}>
-            {posting ? "Posting…" : "Post comment"}
-          </Button>
+      {isClosed ? (
+        <div className="rounded-md border border-dashed bg-muted/40 p-3 text-center text-xs text-muted-foreground">
+          This cycle is closed. Comments are read-only.
         </div>
-      </div>
+      ) : (
+        <div className="relative space-y-2">
+          <Label htmlFor={`comment-${objectiveId}`}>Add a comment</Label>
+          <Textarea
+            id={`comment-${objectiveId}`}
+            ref={textareaRef}
+            value={text}
+            maxLength={MAX_BODY}
+            placeholder="Share an update. Type @ to mention someone who can see this goal."
+            onChange={onChange}
+            onKeyDown={onKeyDown}
+            onBlur={() => window.setTimeout(() => setQuery(null), 150)}
+            role="combobox"
+            aria-expanded={suggestions.length > 0}
+            aria-controls={`comment-${objectiveId}-mentions`}
+            aria-autocomplete="list"
+            aria-activedescendant={suggestions.length ? `comment-${objectiveId}-mention-${suggestions[active]?.id}` : undefined}
+          />
+          {suggestions.length > 0 && (
+            <ul id={`comment-${objectiveId}-mentions`} role="listbox" aria-label="People who can see this goal" className="absolute inset-x-0 z-10 max-h-56 overflow-y-auto rounded-md border bg-popover p-1 shadow-md">
+              {suggestions.map((person, index) => (
+                <li
+                  key={person.id}
+                  id={`comment-${objectiveId}-mention-${person.id}`}
+                  role="option"
+                  aria-selected={index === active}
+                  onMouseDown={(event) => { event.preventDefault(); choose(person); }}
+                  className={cn("flex cursor-pointer items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-sm", index === active && "bg-accent")}
+                >
+                  <span className="truncate">{person.name}</span>
+                  {person.jobTitle && <span className="truncate text-xs text-muted-foreground">{person.jobTitle}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+          {query !== null && !suggestions.length && mentionable.length > 0 && (
+            <p className="text-xs text-muted-foreground">No one who can see this goal matches “{query}”.</p>
+          )}
+          {message && <p role={message.tone === "error" ? "alert" : "status"} className={cn("text-xs", message.tone === "error" ? "text-destructive" : "text-muted-foreground")}>{message.text}</p>}
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground">Ctrl/⌘ + Enter to post</p>
+            <Button type="button" size="sm" onClick={() => void post()} disabled={posting || !text.trim()}>
+              {posting ? "Posting…" : "Post comment"}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

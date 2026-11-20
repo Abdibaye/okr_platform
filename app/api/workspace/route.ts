@@ -64,7 +64,17 @@ export async function GET() {
     if (canViewObjective(objective, viewer, accessIndex.factsFor(objective))) visibleIds.add(objective.id);
   }
   const objectiveRows = allObjectives.filter((objective) => visibleIds.has(objective.id) && !objective.archivedAt);
+  const archivedObjectiveRows = allObjectives.filter((objective) => visibleIds.has(objective.id) && Boolean(objective.archivedAt));
   const objectiveIds = objectiveRows.map((objective) => objective.id);
+  const archivedObjectiveIds = archivedObjectiveRows.map((objective) => objective.id);
+  const archivedResultIds = archivedObjectiveIds.length
+    ? await database.select({ id: keyResults.id })
+      .from(keyResults)
+      .where(and(
+        eq(keyResults.companyId, context.companyId),
+        inArray(keyResults.objectiveId, archivedObjectiveIds),
+      ))
+    : [];
   const resultRows = objectiveIds.length
     ? await database.select().from(keyResults).where(and(
       eq(keyResults.companyId, context.companyId),
@@ -72,6 +82,16 @@ export async function GET() {
       isNull(keyResults.archivedAt),
     )).orderBy(keyResults.createdAt)
     : [];
+  const archivedKrs = archivedObjectiveIds.length
+    ? await database.select({ objectiveId: keyResults.objectiveId }).from(keyResults).where(and(
+      eq(keyResults.companyId, context.companyId),
+      inArray(keyResults.objectiveId, archivedObjectiveIds),
+    ))
+    : [];
+  const archivedKrCount = new Map<string, number>();
+  for (const kr of archivedKrs) {
+    archivedKrCount.set(kr.objectiveId, (archivedKrCount.get(kr.objectiveId) ?? 0) + 1);
+  }
   const editorRows = resultRows.length
     ? await database.select({ keyResultId: keyResultEditors.keyResultId, userId: keyResultEditors.userId }).from(keyResultEditors)
       .where(inArray(keyResultEditors.keyResultId, resultRows.map((result) => result.id)))
@@ -84,12 +104,22 @@ export async function GET() {
     : [];
 
   const krObjective = new Map(resultRows.map((result) => [result.id, result.objectiveId]));
+  const archivedResultRows = archivedResultIds.length
+    ? await database.select().from(keyResults).where(inArray(keyResults.id, archivedResultIds.map((result) => result.id)))
+      .orderBy(keyResults.createdAt)
+    : [];
+  const archivedEditorRows = archivedResultRows.length
+    ? await database.select({ keyResultId: keyResultEditors.keyResultId, userId: keyResultEditors.userId }).from(keyResultEditors)
+      .where(inArray(keyResultEditors.keyResultId, archivedResultRows.map((result) => result.id)))
+    : [];
   const editorsByResult = new Map<string, string[]>();
-  for (const row of editorRows) {
+  const addEditor = (row: { keyResultId: string; userId: string }) => {
     const list = editorsByResult.get(row.keyResultId) ?? [];
     list.push(row.userId);
     editorsByResult.set(row.keyResultId, list);
-  }
+  };
+  editorRows.forEach(addEditor);
+  archivedEditorRows.forEach(addEditor);
 
   const person = (id: string | null) => {
     const member = id ? membersById.get(id) : undefined;
@@ -98,9 +128,12 @@ export async function GET() {
 
   const hydratedObjectives = objectiveRows.map((objective) => {
     const facts = accessIndex.factsFor(objective);
+    const parentVisible = objective.parentObjectiveId ? visibleIds.has(objective.parentObjectiveId) : false;
     const canEdit = canEditObjective(objective, viewer, facts);
     return {
       ...objective,
+      parentObjectiveId: parentVisible ? objective.parentObjectiveId : null,
+      parentRestricted: Boolean(objective.parentObjectiveId) && !parentVisible,
       owner: person(objective.ownerId),
       team: objective.teamId ? teamsById.get(objective.teamId) ?? null : null,
       access: accessIndex.accessFor(objective.id),
@@ -118,6 +151,31 @@ export async function GET() {
       }),
     };
   });
+  const hydratedArchivedObjectives = archivedObjectiveRows.map((objective) => {
+    const facts = accessIndex.factsFor(objective);
+    const parentVisible = objective.parentObjectiveId ? visibleIds.has(objective.parentObjectiveId) : false;
+    const canEdit = canEditObjective(objective, viewer, facts);
+    return {
+      ...objective,
+      parentObjectiveId: parentVisible ? objective.parentObjectiveId : null,
+      parentRestricted: Boolean(objective.parentObjectiveId) && !parentVisible,
+      owner: person(objective.ownerId),
+      team: objective.teamId ? teamsById.get(objective.teamId) ?? null : null,
+      access: accessIndex.accessFor(objective.id),
+      canEdit,
+      canManage: canManagePrivacy(objective, viewer, facts),
+      canApprove: context.role === "admin" || (facts.ownerManagerId !== null && facts.ownerManagerId === userId),
+      keyResults: archivedResultRows.filter((result) => result.objectiveId === objective.id).map((result) => {
+        const editors = editorsByResult.get(result.id) ?? [];
+        return {
+          ...result,
+          owner: person(result.ownerId),
+          editorIds: editors,
+          canCheckIn: canEditKeyResult(objective, result, viewer, facts, editors),
+        };
+      }),
+    };
+  });
 
   const objectivesByCycle = new Map<string, typeof hydratedObjectives>();
   for (const objective of hydratedObjectives) {
@@ -125,9 +183,30 @@ export async function GET() {
     list.push(objective);
     objectivesByCycle.set(objective.cycleId, list);
   }
+
+  const archivedObjectives = archivedObjectiveRows.map((objective) => {
+    const facts = accessIndex.factsFor(objective);
+    return {
+      id: objective.id,
+      cycleId: objective.cycleId,
+      title: objective.title,
+      archivedAt: objective.archivedAt ? objective.archivedAt.toISOString() : null,
+      canManage: canManagePrivacy(objective, viewer, facts),
+      owner: person(objective.ownerId),
+      keyResultCount: archivedKrCount.get(objective.id) ?? 0,
+    };
+  });
+  const archivedObjectivesByCycle = new Map<string, typeof archivedObjectives>();
+  for (const objective of archivedObjectives) {
+    const list = archivedObjectivesByCycle.get(objective.cycleId) ?? [];
+    list.push(objective);
+    archivedObjectivesByCycle.set(objective.cycleId, list);
+  }
+
   const hydratedCycles = cycles.map((cycle) => ({
     ...cycle,
     objectives: objectivesByCycle.get(cycle.id) ?? [],
+    archivedObjectives: archivedObjectivesByCycle.get(cycle.id) ?? [],
   }));
   const { summaries, comparisons } = buildPeriodComparisons(hydratedCycles);
 
@@ -139,7 +218,9 @@ export async function GET() {
       return context.role === "admin" || (objectiveId !== undefined && visibleIds.has(objectiveId));
     }
     return true;
-  }).slice(0, 20);
+  }).slice(0, 20)
+    // Only what the feed renders; audit details can reference goals this viewer cannot see.
+    .map((row) => ({ id: row.id, action: row.action, reason: row.reason, createdAt: row.createdAt }));
 
   return NextResponse.json({
     user: {
@@ -164,6 +245,7 @@ export async function GET() {
     })),
     teams: teamRows,
     cycles: hydratedCycles,
+    archivedObjectives: hydratedArchivedObjectives,
     summaries,
     comparisons,
     audit,

@@ -70,6 +70,7 @@ export interface Workspace {
   members: WorkspaceMember[];
   teams: WorkspaceTeam[];
   cycles: Cycle[];
+  archivedObjectives: Objective[];
   summaries: CycleSummary[];
   comparisons: PeriodComparison[];
   audit: AuditLog[];
@@ -85,8 +86,18 @@ export interface Cycle {
   requireApproval: boolean;
   checkInCadence: CheckInCadence;
   archivedAt: string | null;
+
   version: number;
   objectives: Objective[];
+  archivedObjectives?: Array<{
+    id: string;
+    cycleId: string;
+    title: string;
+    archivedAt: string | null;
+    canManage: boolean;
+    owner: { id: string; name: string; jobTitle: string } | null;
+    keyResultCount: number;
+  }>;
 }
 
 export interface Objective {
@@ -105,10 +116,12 @@ export interface Objective {
   approvalStatus: ApprovalStatus;
   visibility: GoalVisibility;
   parentObjectiveId: string | null;
+  parentRestricted: boolean;
   copiedFromObjectiveId: string | null;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+  archivedAt: string | null;
   version: number;
   access: { userId: string; permission: "viewer" | "editor" }[];
   canEdit: boolean;

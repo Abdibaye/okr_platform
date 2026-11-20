@@ -2,6 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { contextOr401, errorResponse, isResponse, isUuid, readJson } from "@/server/api-utils";
 import { getDb } from "@/server/db";
+import { deliverNotificationEmails, notifyNewOwners } from "@/server/notifications";
 import { keyResultEditors, keyResults, krCheckIns, objectives, okrCycles } from "@/server/schema";
 import { calculateProgress } from "@/server/okr-math";
 import { recomputeKeyResultFromCheckIns, refreshObjectiveProgress, todayWithinCycle } from "@/server/okr-mutations";
@@ -32,6 +33,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (body.archived !== undefined && body.archived !== true) return errorResponse("Archived key results cannot be restored here.", 400);
 
   const actorId = context.session.user.id;
+  const actorName = context.session.user.name || "Someone";
   const viewer = viewerFromContext(context);
   try {
     const input = parseKeyResultInput(body);
@@ -41,6 +43,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const checkInOnly = !archiving && changedKeys.every((key) => key === "current");
 
     const result = await getDb().transaction(async (transaction) => {
+      let notified: string[] = [];
       const [row] = await transaction.select({ keyResult: keyResults, objective: objectives, cycleStatus: okrCycles.status, cycleStartDate: okrCycles.startDate, cycleEndDate: okrCycles.endDate })
         .from(keyResults)
         .innerJoin(objectives, and(eq(objectives.id, keyResults.objectiveId), eq(objectives.companyId, context.companyId)))
@@ -94,7 +97,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           entityId: id,
           reason: `Archived key result "${keyResult.title}"`,
         });
-        return { keyResult: archived };
+        return { keyResult: archived, notified: [] };
       }
 
       if (input.ownerId) await assertActiveMembers(transaction, context.companyId, [input.ownerId], "The key result owner");
@@ -174,10 +177,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           details: { from: keyResult.ownerId, to: input.ownerId },
         });
       }
-      return { keyResult: updated };
+      if (input.ownerId && input.ownerId !== keyResult.ownerId) {
+        notified = await notifyNewOwners(transaction, context.companyId, actorId, actorName, `v${updated.version}`, [{
+          recipientId: input.ownerId, objectiveId: objective.id, goalTitle: objective.title, keyResultId: id, keyResultTitle: updated.title,
+        }]);
+      }
+      return { keyResult: updated, notified };
     });
     if (isResponse(result)) return result;
-    return NextResponse.json(result);
+    await deliverNotificationEmails(result.notified);
+    return NextResponse.json({ keyResult: result.keyResult });
   } catch (error) {
     if (error instanceof InputError) return errorResponse(error.message, error.status);
     throw error;

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { contextOr401, isResponse, readJson } from "@/server/api-utils";
 import { getDb } from "@/server/db";
+import { deliverNotificationEmails, notifyNewOwners } from "@/server/notifications";
 import { validateOkrCsv } from "@/server/okr-import";
 import { calculateProgress } from "@/server/okr-math";
 import { refreshObjectiveProgress } from "@/server/okr-mutations";
@@ -14,6 +15,8 @@ export async function POST(request: Request) {
   if (isResponse(context)) return context;
   const body = await readJson(request);
   const csv = typeof body?.csv === "string" ? body.csv : "";
+  const actorId = context.session.user.id;
+  const actorName = context.session.user.name || "Someone";
   const dryRun = body?.dryRun === true;
   if (!csv.trim()) return NextResponse.json({ error: "Provide CSV text to import." }, { status: 400 });
 
@@ -31,6 +34,7 @@ export async function POST(request: Request) {
   const result = await getDb().transaction(async (transaction) => {
     const objectiveIdByTitle = new Map<string, string>();
     const objectivePlans = [...new Map(validation.plans.map((plan) => [plan.objectiveTitle.toLowerCase(), plan])).values()];
+    const importedKeyResults: Array<{ id: string; plan: (typeof validation.plans)[number] }> = [];
     for (const plan of objectivePlans) {
       const [objective] = await transaction.insert(objectives).values({
         companyId: context.companyId,
@@ -43,14 +47,14 @@ export async function POST(request: Request) {
         dueDate: plan.dueDate,
         visibility: plan.visibility,
         parentObjectiveId: plan.parentObjectiveId,
-        createdBy: context.session.user.id,
+        createdBy: actorId,
       }).returning({ id: objectives.id });
       objectiveIdByTitle.set(plan.objectiveTitle.toLowerCase(), objective.id);
     }
 
     for (const plan of validation.plans) {
       const progress = calculateProgress(plan.baseline, plan.target, plan.current, plan.direction, plan.metricType);
-      await transaction.insert(keyResults).values({
+      const [created] = await transaction.insert(keyResults).values({
         companyId: context.companyId,
         objectiveId: objectiveIdByTitle.get(plan.objectiveTitle.toLowerCase())!,
         title: plan.krTitle,
@@ -62,20 +66,36 @@ export async function POST(request: Request) {
         current: plan.current.toString(),
         progress: progress.toFixed(2),
         ownerId: plan.ownerId,
-      });
+      }).returning({ id: keyResults.id });
+      importedKeyResults.push({ id: created.id, plan });
     }
     for (const objectiveId of objectiveIdByTitle.values()) await refreshObjectiveProgress(transaction, objectiveId, context.companyId);
     await recordAudit(transaction, {
       companyId: context.companyId,
-      actorId: context.session.user.id,
+      actorId,
       action: "okrs_imported",
       entityType: "import",
       entityId: "okr-import",
       reason: `Imported ${objectivePlans.length} objectives and ${validation.plans.length} key results from CSV`,
       details: { objectiveCount: objectivePlans.length, keyResultCount: validation.plans.length },
     });
-    return objectiveIdByTitle;
+    const notified = await notifyNewOwners(transaction, context.companyId, actorId, actorName, "import", [
+      ...objectivePlans.map((plan) => ({
+        recipientId: plan.ownerId,
+        objectiveId: objectiveIdByTitle.get(plan.objectiveTitle.toLowerCase())!,
+        goalTitle: plan.objectiveTitle,
+      })),
+      ...importedKeyResults.map(({ id, plan }) => ({
+        recipientId: plan.ownerId,
+        objectiveId: objectiveIdByTitle.get(plan.objectiveTitle.toLowerCase())!,
+        goalTitle: plan.objectiveTitle,
+        keyResultId: id,
+        keyResultTitle: plan.krTitle,
+      })),
+    ]);
+    return { objectiveIdByTitle, notified };
   });
+  await deliverNotificationEmails(result.notified);
 
   return NextResponse.json({
     dryRun: false,
@@ -83,6 +103,6 @@ export async function POST(request: Request) {
     errors: [],
     plannedObjectives: validation.plannedObjectives,
     plannedKeyResults: validation.plannedKeyResults,
-    objectiveIds: [...result.values()],
+    objectiveIds: [...result.objectiveIdByTitle.values()],
   });
 }

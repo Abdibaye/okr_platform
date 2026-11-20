@@ -1,9 +1,11 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { contextOr401, errorResponse, isResponse, isUuid, readJson } from "@/server/api-utils";
 import { hasRole } from "@/server/request-context";
 import { getDb } from "@/server/db";
-import { auditLogs, okrCycles } from "@/server/schema";
+import { auditLogs, keyResults, objectives, okrCycles } from "@/server/schema";
+import { resolveNotificationsForEntities } from "@/server/notifications";
+import { clearStaleRequests } from "@/server/reminders";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const context = await contextOr401();
@@ -56,15 +58,34 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const [updated] = await transaction.update(okrCycles).set(updates).where(and(...conditions)).returning();
     if (!updated) return null;
 
+    const cycleObjectives = await transaction.select({ id: objectives.id }).from(objectives).where(and(
+      eq(objectives.companyId, context.companyId),
+      eq(objectives.cycleId, id),
+    ));
+    const objectiveIds = cycleObjectives.map((row) => row.id);
+    const cycleKeyResults = objectiveIds.length
+      ? await transaction.select({ id: keyResults.id }).from(keyResults).where(and(
+          eq(keyResults.companyId, context.companyId),
+          inArray(keyResults.objectiveId, objectiveIds),
+        ))
+      : [];
+    const staleRequestsCleared = await resolveNotificationsForEntities(
+      transaction,
+      context.companyId,
+      [...objectiveIds, ...cycleKeyResults.map((row) => row.id)],
+      ["check_in_request", "check_in_cadence", "approaching_deadline", "overdue_update"],
+    );
+
     await transaction.insert(auditLogs).values({
       companyId: context.companyId,
       cycleId: id,
       actorId: context.session.user.id,
       action: "cycle_closed",
       reason,
-      details: finalReflection !== undefined ? { finalReflectionLength: finalReflection.length } : {},
+      details: { ...(finalReflection !== undefined ? { finalReflectionLength: finalReflection.length } : {}), staleRequestsCleared },
     });
-    return updated;
+    await clearStaleRequests(transaction, context.companyId);
+    return { cycle: updated, staleRequestsCleared };
   });
 
   if (!closed) {
@@ -77,5 +98,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "This cycle changed elsewhere. Reload before closing.", version: latest.version }, { status: 409 });
   }
 
-  return NextResponse.json({ status: "closed", cycle: closed });
+  return NextResponse.json({ status: "closed", cycle: closed.cycle, staleRequestsCleared: closed.staleRequestsCleared });
 }
