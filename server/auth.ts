@@ -38,7 +38,7 @@ async function deliverResetPasswordEmail(email: string, url: string) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: process.env.EMAIL_FROM || "Alineo <onboarding@resend.dev>",
+        from: process.env.EMAIL_FROM || "Neander <no-reply@apps.neander.ai>",
         to: [email],
         subject: "Reset your Alineo password",
         text: `Reset your password using this link: ${url}`,
@@ -46,7 +46,9 @@ async function deliverResetPasswordEmail(email: string, url: string) {
       }),
     });
     if (!response.ok) {
-      throw new Error(`Email delivery failed (${response.status})`);
+      const payload = await response.json().catch(() => null) as { message?: string; error?: string } | null;
+      const detail = (payload?.message || payload?.error) ? `: ${payload.message || payload.error}` : ` (${response.status})`;
+      throw new Error(`Email delivery failed${detail}`.slice(0, 500));
     }
     return;
   }
