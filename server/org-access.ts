@@ -210,3 +210,24 @@ export async function loadVisibleObjective(executor: Executor, context: RequestC
   const facts = await loadObjectiveAccessFacts(executor, context.companyId, objective.id, objective.ownerId);
   return canViewObjective(objective, viewerFromContext(context), facts) ? { objective, facts } : null;
 }
+
+/**
+ * The parent link as this viewer may see it. A goal can be aligned under a parent they cannot view;
+ * the link survives, but the parent's id must not reveal a goal they may not see. `parentRestricted`
+ * lets the UI keep showing "Private goal" without the id.
+ */
+export async function visibleParentLink(
+  executor: Executor,
+  context: RequestContext,
+  parentObjectiveId: string | null,
+): Promise<{ parentObjectiveId: string | null; parentRestricted: boolean }> {
+  if (!parentObjectiveId) return { parentObjectiveId: null, parentRestricted: false };
+  const [parent] = await executor.select().from(objectives).where(and(
+    eq(objectives.id, parentObjectiveId),
+    eq(objectives.companyId, context.companyId),
+  )).limit(1);
+  if (!parent) return { parentObjectiveId: null, parentRestricted: false };
+  const facts = await loadObjectiveAccessFacts(executor, context.companyId, parent.id, parent.ownerId);
+  if (!canViewObjective(parent, viewerFromContext(context), facts)) return { parentObjectiveId: null, parentRestricted: true };
+  return { parentObjectiveId, parentRestricted: false };
+}

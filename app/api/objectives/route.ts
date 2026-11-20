@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { contextOr401, errorResponse, isResponse, isUuid, readJson } from "@/server/api-utils";
 import { getDb } from "@/server/db";
+import { deliverNotificationEmails, notifyNewOwners } from "@/server/notifications";
 import {
   assertActiveMembers,
   assertActiveTeam,
@@ -10,6 +11,8 @@ import {
   InputError,
   parseObjectiveInput,
   replaceObjectiveAccess,
+  visibleParentLink,
+  viewerFromContext,
 } from "@/server/objectives";
 import { recordAudit } from "@/server/people";
 import { hasRole } from "@/server/request-context";
@@ -23,6 +26,8 @@ export async function POST(request: Request) {
   if (!body || !isUuid(cycleId)) return errorResponse("Provide a goal title and valid cycle.", 400);
 
   const actorId = context.session.user.id;
+  const actorName = context.session.user.name || "Someone";
+  const viewer = viewerFromContext(context);
   const canManage = hasRole(context.role, ["admin", "manager"]);
   try {
     const input = parseObjectiveInput(body);
@@ -51,7 +56,7 @@ export async function POST(request: Request) {
       if (ownerId) await assertActiveMembers(transaction, context.companyId, [ownerId], "The goal owner");
       await assertActiveMembers(transaction, context.companyId, [...(input.viewerIds ?? []), ...(input.editorIds ?? [])], "People given access");
       if (goal.teamId) await assertActiveTeam(transaction, context.companyId, goal.teamId);
-      if (input.parentObjectiveId) await assertValidParent(transaction, context.companyId, cycleId, null, input.parentObjectiveId);
+      if (input.parentObjectiveId) await assertValidParent(transaction, context.companyId, cycleId, null, input.parentObjectiveId, viewer);
 
       const [created] = await transaction.insert(objectives).values({
         companyId: context.companyId,
@@ -79,9 +84,15 @@ export async function POST(request: Request) {
         reason: `Created goal "${created.title}"`,
         details: { level, ownerId, visibility: goal.visibility, parentObjectiveId: created.parentObjectiveId },
       });
-      return created;
+      const notified = ownerId
+        ? await notifyNewOwners(transaction, context.companyId, actorId, actorName, "created", [{
+          recipientId: ownerId, objectiveId: created.id, goalTitle: created.title,
+        }])
+        : [];
+      return { objective: { ...created, ...await visibleParentLink(transaction, context, created.parentObjectiveId) }, notified };
     });
-    return NextResponse.json({ objective }, { status: 201 });
+    await deliverNotificationEmails(objective.notified);
+    return NextResponse.json({ objective: objective.objective }, { status: 201 });
   } catch (error) {
     if (error instanceof InputError) return errorResponse(error.message, error.status);
     throw error;

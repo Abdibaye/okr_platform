@@ -12,6 +12,7 @@
     "build": "next build && node .neander/prepare-standalone.mjs",
     "start": "node .next/standalone/server.js",
     "check": "tsc --noEmit",
+    "check:archive-restore": "node --env-file=.env.local --experimental-transform-types --import ./scripts/register-loader.mjs scripts/archive-restore.check.mts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file=.env.local .neander/migrate.mjs",
     "db:seed": "node --env-file=.env.local scripts/seed.mjs"

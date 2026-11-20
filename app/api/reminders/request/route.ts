@@ -107,6 +107,7 @@ export async function POST(request: Request) {
 
     const facts = await loadObjectiveAccessFacts(database, context.companyId, goal.id, goal.ownerId);
     if (!canViewObjective(goal, viewer, facts)) return errorResponse(NOT_FOUND, 404);
+
     const recipientId = keyResult?.ownerId ?? goal.ownerId;
     if (!recipientId || !viewerFromChart(chart, recipientId)) return errorResponse("This has no active owner to ask.", 400);
     if (recipientId === actorId) return errorResponse("You own this; check in directly instead.", 400);

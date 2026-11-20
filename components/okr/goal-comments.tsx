@@ -31,7 +31,7 @@ function CommentBody({ body, names }: { body: string; names: Map<string, string>
  * Discussion on a goal. Typing `@` suggests only people who can already see the goal (the server
  * enforces the same rule), and the chosen names are sent as `@[id]` tokens so emails stay private.
  */
-export function GoalComments({ objectiveId, cycleClosed: cycleClosedProp }: { objectiveId: string; cycleClosed?: boolean }) {
+export function GoalComments({ objectiveId, cycleClosed: cycleClosedProp, closed }: { objectiveId: string; cycleClosed?: boolean; closed?: boolean }) {
   const [comments, setComments] = useState<GoalComment[]>([]);
   const [mentionable, setMentionable] = useState<PersonSummary[]>([]);
   const [loading, setLoading] = useState(true);

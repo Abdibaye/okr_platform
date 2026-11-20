@@ -19,6 +19,7 @@ import { GoalComments } from "./goal-comments";
 import { useWorkspace } from "./workspace-context";
 
 const NONE = "none";
+const HIDDEN_PARENT = "hidden-parent";
 
 type Permission = "viewer" | "editor";
 
@@ -50,7 +51,7 @@ function draftFrom(objective: Objective): GoalDraft {
     ownerId: objective.ownerId ?? NONE,
     dueDate: objective.dueDate ?? "",
     status: objective.status,
-    parentObjectiveId: objective.parentObjectiveId ?? NONE,
+    parentObjectiveId: objective.parentRestricted ? HIDDEN_PARENT : objective.parentObjectiveId ?? NONE,
     visibility: objective.visibility,
     access: objective.access.map((entry) => ({ ...entry })),
   };
@@ -65,7 +66,7 @@ function sameIds(left: string[], right: string[]) {
 }
 
 function nullable(value: string) {
-  return value === NONE || value === "" ? null : value;
+  return value === NONE || value === "" || value === HIDDEN_PARENT ? null : value;
 }
 
 function Section({
@@ -345,7 +346,8 @@ export function GoalSheet({
                     <SelectTrigger id="goal-parent" className="w-full"><SelectValue placeholder="Not aligned" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value={NONE}>Not aligned</SelectItem>
-                      {draft.parentObjectiveId !== NONE && !parentOptions.some((candidate) => candidate.id === draft.parentObjectiveId) && (
+                      {draft.parentObjectiveId === HIDDEN_PARENT && <SelectItem value={HIDDEN_PARENT}>Private goal</SelectItem>}
+                      {draft.parentObjectiveId !== NONE && draft.parentObjectiveId !== HIDDEN_PARENT && !parentOptions.some((candidate) => candidate.id === draft.parentObjectiveId) && (
                         // The parent is outside this cycle or hidden from this person: keep the link without revealing it.
                         <SelectItem value={draft.parentObjectiveId}>{visibleParent ? `${levelLabels[visibleParent.level]} · ${visibleParent.title}` : "Private goal"}</SelectItem>
                       )}
@@ -506,7 +508,7 @@ export function GoalSheet({
                 open={openSections.comments}
                 onToggle={() => setOpenSections((previous) => ({ ...previous, comments: !previous.comments }))}
               >
-                {openSections.comments && <GoalComments objectiveId={objective.id} cycleClosed={cycleClosed} />}
+                {openSections.comments && <GoalComments objectiveId={objective.id} cycleClosed={cycleClosed} closed={cycleClosed} />}
               </Section>
             )}
           </div>

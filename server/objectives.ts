@@ -1,6 +1,7 @@
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { isUuid } from "./api-utils";
 import { wouldCreateAlignmentLoop } from "./okr-math";
+import { canViewObjective, loadObjectiveAccessFacts, type ViewerFacts } from "./org-access";
 import type { Transaction } from "./people";
 import {
   companyMemberships,
@@ -124,7 +125,9 @@ export async function assertActiveTeam(executor: Executor, companyId: string, te
 }
 
 /**
- * Validates the parent link: same company, same cycle, not archived, and no alignment loop.
+ * Validates the parent link: same company, same cycle, not archived, no alignment loop, and the
+ * viewer must be able to see the parent. Restricted parents are neither usable nor probeable:
+ * every failure shares one message.
  * `objectiveId` is null when creating a new goal (a brand-new goal cannot close a loop).
  */
 export async function assertValidParent(
@@ -133,15 +136,23 @@ export async function assertValidParent(
   cycleId: string,
   objectiveId: string | null,
   parentObjectiveId: string,
+  viewer: ViewerFacts,
 ) {
   const rows = await executor.select({
     id: objectives.id,
     cycleId: objectives.cycleId,
     parentObjectiveId: objectives.parentObjectiveId,
     archivedAt: objectives.archivedAt,
+    visibility: objectives.visibility,
+    teamId: objectives.teamId,
+    ownerId: objectives.ownerId,
+    createdBy: objectives.createdBy,
   }).from(objectives).where(and(eq(objectives.companyId, companyId), eq(objectives.cycleId, cycleId)));
   const parent = rows.find((row) => row.id === parentObjectiveId);
-  if (!parent || parent.archivedAt) throw new InputError("The aligned parent goal must be an active goal in the same cycle.");
+  const message = "The aligned parent goal must be an active goal in this cycle that you can view.";
+  if (!parent || parent.archivedAt) throw new InputError(message);
+  const facts = await loadObjectiveAccessFacts(executor, companyId, parent.id, parent.ownerId);
+  if (!canViewObjective(parent, viewer, facts)) throw new InputError(message);
   if (objectiveId) {
     const parentById = new Map(rows.map((row) => [row.id, row.parentObjectiveId]));
     if (wouldCreateAlignmentLoop(parentById, objectiveId, parentObjectiveId)) {
@@ -186,6 +197,7 @@ export {
   canViewObjective,
   loadObjectiveAccessFacts,
   viewerFromContext,
+  visibleParentLink,
   type ObjectiveAccessFacts,
   type ViewerFacts,
   type VisibilityFacts,

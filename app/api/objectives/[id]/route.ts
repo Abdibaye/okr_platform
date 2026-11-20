@@ -2,6 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { contextOr401, errorResponse, isResponse, isUuid, readJson } from "@/server/api-utils";
 import { getDb } from "@/server/db";
+import { deliverNotificationEmails, notifyNewOwners } from "@/server/notifications";
 import {
   assertActiveMembers,
   assertActiveTeam,
@@ -14,6 +15,7 @@ import {
   loadObjectiveAccessFacts,
   parseObjectiveInput,
   replaceObjectiveAccess,
+  visibleParentLink,
   viewerFromContext,
 } from "@/server/objectives";
 import { recordAudit } from "@/server/people";
@@ -42,6 +44,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (body.archived !== undefined && body.archived !== true) return errorResponse("Archived goals cannot be restored here.", 400);
 
   const actorId = context.session.user.id;
+  const actorName = context.session.user.name || "Someone";
   const viewer = viewerFromContext(context);
   try {
     const input = parseObjectiveInput(body);
@@ -49,6 +52,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (!archiving && !Object.keys(input).length) return errorResponse("Provide a change to save.", 400);
 
     const result = await getDb().transaction(async (transaction) => {
+      let notified: string[] = [];
       const [current] = await transaction.select({ objective: objectives, cycleStatus: okrCycles.status })
         .from(objectives)
         .innerJoin(okrCycles, eq(okrCycles.id, objectives.cycleId))
@@ -96,7 +100,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           entityId: id,
           reason: `Archived goal "${objective.title}"`,
         });
-        return { objective: archived };
+        return { objective: { ...archived, ...await visibleParentLink(transaction, context, archived.parentObjectiveId) }, notified: [] };
       }
 
       const next = {
@@ -109,7 +113,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       await assertActiveMembers(transaction, context.companyId, [...(input.viewerIds ?? []), ...(input.editorIds ?? [])], "People given access");
       if (input.teamId && input.teamId !== objective.teamId) await assertActiveTeam(transaction, context.companyId, input.teamId);
       if (input.parentObjectiveId && input.parentObjectiveId !== objective.parentObjectiveId) {
-        await assertValidParent(transaction, context.companyId, objective.cycleId, id, input.parentObjectiveId);
+        await assertValidParent(transaction, context.companyId, objective.cycleId, id, input.parentObjectiveId, viewer);
       }
 
       const { viewerIds, editorIds, ...fields } = input;
@@ -147,10 +151,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           details: { viewerIds: viewerIds ?? null, editorIds: editorIds ?? null },
         });
       }
-      return { objective: updated };
+      if (input.ownerId && input.ownerId !== objective.ownerId) {
+        notified = await notifyNewOwners(transaction, context.companyId, actorId, actorName, `v${updated.version}`, [{
+          recipientId: input.ownerId, objectiveId: id, goalTitle: updated.title,
+        }]);
+      }
+      return { objective: { ...updated, ...await visibleParentLink(transaction, context, updated.parentObjectiveId) }, notified };
     });
     if (isResponse(result)) return result;
-    return NextResponse.json(result);
+    await deliverNotificationEmails(result.notified);
+    return NextResponse.json({ objective: result.objective });
   } catch (error) {
     if (error instanceof InputError) return errorResponse(error.message, error.status);
     throw error;

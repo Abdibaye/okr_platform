@@ -2,6 +2,7 @@ import { and, eq, inArray, isNull, ne } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { contextOr401, errorResponse, isResponse, isUuid, readJson } from "@/server/api-utils";
 import { getDb } from "@/server/db";
+import { deliverNotificationEmails, notifyNewOwners } from "@/server/notifications";
 import { countActiveAdmins, createsReportingLoop, isRole, loadManagerMap, recordAudit } from "@/server/people";
 import { hasRole } from "@/server/request-context";
 import { companyMemberships, keyResults, objectives, teamMemberships, teams, user } from "@/server/schema";
@@ -125,6 +126,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/members/[i
       }
 
       let reassigned = { objectives: 0, keyResults: 0 };
+      let notified: string[] = [];
       if (body.isActive === false && target.isActive) {
         if (target.userId === actorId) throw new MemberUpdateError("You cannot deactivate yourself.", 409);
         if (target.role === "admin" && await countActiveAdmins(transaction, context.companyId) <= 1) {
@@ -142,6 +144,34 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/members/[i
           const movedResults = await transaction.update(keyResults).set({ ownerId: reassignTo, updatedAt: now })
             .where(and(eq(keyResults.companyId, context.companyId), eq(keyResults.ownerId, target.userId)))
             .returning({ id: keyResults.id });
+          const reassignedGoals = movedObjectives.length
+            ? await transaction.select({ id: objectives.id, title: objectives.title }).from(objectives).where(and(
+                inArray(objectives.id, movedObjectives.map((row) => row.id)),
+                isNull(objectives.archivedAt),
+              ))
+            : [];
+          const reassignedKrs = movedResults.length
+            ? await transaction.select({
+                id: keyResults.id,
+                title: keyResults.title,
+                objectiveId: keyResults.objectiveId,
+                objectiveTitle: objectives.title,
+              }).from(keyResults)
+              .innerJoin(objectives, eq(objectives.id, keyResults.objectiveId))
+              .where(and(
+                inArray(keyResults.id, movedResults.map((row) => row.id)),
+                isNull(keyResults.archivedAt),
+                isNull(objectives.archivedAt),
+              ))
+            : [];
+          notified = await notifyNewOwners(transaction, context.companyId, actorId, context.session.user.name || "Someone", `reassign:${target.userId}:${now.getTime()}`, [
+            ...reassignedGoals.map((goal) => ({
+              recipientId: reassignTo, objectiveId: goal.id, goalTitle: goal.title,
+            })),
+            ...reassignedKrs.map((kr) => ({
+              recipientId: reassignTo, objectiveId: kr.objectiveId, goalTitle: kr.objectiveTitle, keyResultId: kr.id, keyResultTitle: kr.title,
+            })),
+          ]);
           reassigned = { objectives: movedObjectives.length, keyResults: movedResults.length };
           changes.reassignedTo = reassignTo;
           changes.reassigned = reassigned;
@@ -171,9 +201,10 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/members/[i
         reason,
         details: { userId: target.userId, ...changes },
       });
-      return { member: updated, reassigned };
+      return { member: updated, reassigned, notified };
     }, { isolationLevel: "serializable" });
-    return NextResponse.json(result);
+    await deliverNotificationEmails(result.notified);
+    return NextResponse.json({ member: result.member, reassigned: result.reassigned });
   } catch (error) {
     if (error instanceof MemberUpdateError) return errorResponse(error.message, error.status);
     throw error;
