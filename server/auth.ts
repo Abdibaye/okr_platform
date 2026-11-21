@@ -5,6 +5,7 @@ import { getDb } from "./db";
 import { acceptInvitation } from "./people";
 import { companies, companyMemberships, invitations } from "./schema";
 import { senderAddress } from "./email";
+import { buildResetPasswordEmail } from "./reset-email";
 
 export const demoCompanyId = "6e2c4a1e-89a1-4d57-9c37-832473fd28d6";
 
@@ -30,7 +31,8 @@ export function hasResetEmailDelivery() {
   return Boolean(process.env.RESEND_API_KEY || process.env.PASSWORD_RESET_WEBHOOK_URL);
 }
 
-async function deliverResetPasswordEmail(email: string, url: string) {
+async function deliverResetPasswordEmail(email: string, url: string, name?: string | null) {
+  const message = buildResetPasswordEmail({ email, url, name });
   if (process.env.RESEND_API_KEY) {
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -41,9 +43,9 @@ async function deliverResetPasswordEmail(email: string, url: string) {
       body: JSON.stringify({
         from: senderAddress(),
         to: [email],
-        subject: "Reset your Alineo password",
-        text: `Reset your password using this link: ${url}`,
-        html: `<p>Reset your Alineo password using the link below:</p><p><a href="${url}">Reset password</a></p>`,
+        subject: message.subject,
+        text: message.text,
+        html: message.html,
       }),
     });
     if (!response.ok) {
@@ -58,7 +60,7 @@ async function deliverResetPasswordEmail(email: string, url: string) {
     const response = await fetch(process.env.PASSWORD_RESET_WEBHOOK_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, url }),
+      body: JSON.stringify({ email, url, subject: message.subject, text: message.text, html: message.html }),
     });
     if (!response.ok) {
       throw new Error(`Password reset webhook failed (${response.status})`);
@@ -104,7 +106,7 @@ function createAuth() {
       enabled: true,
       revokeSessionsOnPasswordReset: true,
       sendResetPassword: async ({ user, url }) => {
-        await deliverResetPasswordEmail(user.email, url);
+        await deliverResetPasswordEmail(user.email, url, user.name);
       },
     },
     session: { expiresIn: 60 * 60 * 24 * 7, updateAge: 60 * 60 * 24 },
