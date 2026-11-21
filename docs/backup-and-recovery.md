@@ -1,6 +1,6 @@
 # Backup and Recovery Guide
 
-This application stores its core data in PostgreSQL (managed Neon in staging and production environments). Robust backup and disaster recovery encompasses not only goals and key results, but also identity, staff roles, and managerial reporting hierarchies.
+This application stores its core data in PostgreSQL. Robust backup and disaster recovery encompasses not only goals and key results, but also identity, staff roles, and managerial reporting hierarchies.
 
 ---
 
@@ -41,7 +41,7 @@ DATABASE_URL="postgresql://..." pg_dump \
   "$DATABASE_URL"
 ```
 
-* **Neon Point-In-Time Restore (PITR)**: Neon provides continuous write-ahead logging (WAL). In the Neon console, navigate to your Project → **Branches** → **Recovery**, and create a new branch at any target timestamp prior to data loss or accidental changes.
+* **Point-In-Time Restore (PITR) & WAL Archiving**: For production environments configured with continuous Write-Ahead Logging (WAL) or managed cloud snapshots, point-in-time recovery allows rolling back to any specific transaction timestamp prior to an accidental change or data loss.
 
 ### B. Portable Admin JSON Export (`/api/exports/backup`)
 Admins can download a portable JSON export snapshot containing `company`, `cycles`, `teams`, `memberships`, `objectives`, `keyResults`, `checkIns`, `goalComments`, and `auditLogs`. This acts as an auxiliary verification and compliance snapshot.
@@ -62,7 +62,7 @@ Using `manager_email` instead of internal database UUIDs ensures the hierarchy i
 
 When restoring an organizational hierarchy, improper restoration order can trigger **Foreign Key constraint violations** (e.g. attempting to link an employee to a manager whose record has not yet been inserted) or create **circular dependency deadlocks**. The system employs specific architectural safeguards to guarantee integrity:
 
-### Strategy 1: Full Database Restoration (`pg_restore` & Neon PITR)
+### Strategy 1: Full Database Restoration (`pg_restore`)
 When loading a custom format dump with `pg_restore`:
 ```bash
 DATABASE_URL="postgresql://target..." pg_restore \
