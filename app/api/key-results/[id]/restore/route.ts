@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { contextOr401, errorResponse, isResponse } from "@/server/api-utils";
 import { getDb } from "@/server/db";
+import { refreshObjectiveProgress } from "@/server/okr-mutations";
 import { recordAudit } from "@/server/people";
 import { keyResults } from "@/server/schema";
 
@@ -16,6 +17,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   if (!keyResult || !keyResult.archivedAt) return errorResponse("Archived key result not found.", 404);
   await getDb().transaction(async (transaction) => {
     await transaction.update(keyResults).set({ archivedAt: null, updatedAt: new Date() }).where(eq(keyResults.id, keyResult.id));
+    await refreshObjectiveProgress(transaction, keyResult.objectiveId, context.companyId);
     await recordAudit(transaction, {
       companyId: context.companyId,
       actorId: context.session.user.id,
