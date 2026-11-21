@@ -244,8 +244,37 @@ try {
   assert.equal(Number(preGoal.progress), 65, "Goal progress should be 65%");
   logCheck("Pre-archive check-in history and goal progress verified (65%)");
 
-  // 7. Archive the Main Goal
-  console.log("\n-> 7. Archiving the main goal...");
+  // 7. Archive and restore an individual Key Result
+  console.log("\n-> 7. Archiving and restoring an individual Key Result...");
+  const archiveKrRes = await api(`/api/key-results/${kr2Id}/archive`, "POST", {}, users.owner);
+  assert.equal(archiveKrRes.status, 200, `Failed to archive KR2: ${archiveKrRes.text}`);
+  assert.deepEqual(archiveKrRes.body, { archived: true });
+
+  const krArchivedWorkspace = await api("/api/workspace", "GET", null, users.owner);
+  const krArchivedGoal = getWorkspaceObjectives(krArchivedWorkspace.body).find((g) => g.id === goalId);
+  assert.ok(krArchivedGoal, "Goal should remain in workspace while KR2 is archived");
+  assert.equal(Number(krArchivedGoal.progress), 50, "Goal progress should recalculate to 50% after KR2 is archived");
+
+  const krArchivedReport = await api("/api/reports", "GET", null, users.owner);
+  assert.equal(krArchivedReport.status, 200, `Failed to load reports after KR2 was archived: ${krArchivedReport.text}`);
+  assert.equal(Number(krArchivedReport.body.rollups.cycle.find((cycle) => cycle.id === cycleId).averageProgress), 50, "Report cycle average should recalculate to 50% after KR2 is archived");
+
+  const restoreKrRes = await api(`/api/key-results/${kr2Id}/restore`, "POST", {}, users.owner);
+  assert.equal(restoreKrRes.status, 200, `Failed to restore KR2: ${restoreKrRes.text}`);
+  assert.deepEqual(restoreKrRes.body, { restored: true });
+
+  const krRestoredWorkspace = await api("/api/workspace", "GET", null, users.owner);
+  const krRestoredGoal = getWorkspaceObjectives(krRestoredWorkspace.body).find((g) => g.id === goalId);
+  assert.ok(krRestoredGoal, "Goal should remain in workspace after KR2 is restored");
+  assert.equal(Number(krRestoredGoal.progress), 65, "Goal progress should immediately recalculate to 65% after KR2 is restored");
+
+  const krRestoredReport = await api("/api/reports", "GET", null, users.owner);
+  assert.equal(krRestoredReport.status, 200, `Failed to load reports after KR2 was restored: ${krRestoredReport.text}`);
+  assert.equal(Number(krRestoredReport.body.rollups.cycle.find((cycle) => cycle.id === cycleId).averageProgress), 65, "Report cycle average should immediately recalculate to 65% after KR2 is restored");
+  logCheck("Individual KR archive/restore immediately synchronized goal and report progress (50% -> 65%)");
+
+  // 8. Archive the Main Goal
+  console.log("\n-> 8. Archiving the main goal...");
   const archiveRes = await api(`/api/objectives/${goalId}/archive`, "POST", {}, users.owner);
   assert.equal(archiveRes.status, 200, `Failed to archive goal: ${archiveRes.text}`);
   assert.deepEqual(archiveRes.body, { archived: true });
@@ -269,15 +298,15 @@ try {
   assert.ok(!getWorkspaceObjectives(archivedWorkspace.body).some((g) => g.id === goalId), "Archived goal must not appear in active workspace");
   logCheck("Goal and KRs properly archived; check-ins inaccessible while archived.");
 
-  // 8. Restore the Goal
-  console.log("\n-> 8. Restoring the goal via POST /api/objectives/[id]/restore...");
+  // 9. Restore the Goal
+  console.log("\n-> 9. Restoring the goal via POST /api/objectives/[id]/restore...");
   const restoreRes = await api(`/api/objectives/${goalId}/restore`, "POST", {}, users.owner);
   assert.equal(restoreRes.status, 200, `Failed to restore goal: ${restoreRes.text}`);
   assert.deepEqual(restoreRes.body, { restored: true });
   logCheck("Restore endpoint returned { restored: true }");
 
-  // 9. VERIFICATION OF RESTORATION:
-  console.log("\n-> 9. Verifying restoration: Goal, KRs, check-in history, permissions, and isolation...");
+  // 10. VERIFICATION OF RESTORATION:
+  console.log("\n-> 10. Verifying restoration: Goal, KRs, check-in history, permissions, and isolation...");
 
   // A. Database checks for Goal and KRs
   const goalInDbRestored = (await pg.query(`SELECT archived_at, progress FROM objectives WHERE id = $1`, [goalId])).rows[0];
@@ -338,7 +367,7 @@ try {
   logCheck("Goal progress accurately preserved and synchronized in workspace (65%)");
 
   // E. Permissions Preservation
-  console.log("\n-> 10. Verifying permissions preservation across roles...");
+  console.log("\n-> 11. Verifying permissions preservation across roles...");
 
   // 1) Named Viewer in objective_access
   const viewerAccessRows = (await pg.query(`SELECT permission FROM objective_access WHERE objective_id = $1 AND user_id = $2`, [goalId, users.viewer.id])).rows;
