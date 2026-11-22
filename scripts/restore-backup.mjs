@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
 import { Client } from "pg";
 import { hashPassword } from "better-auth/crypto";
 
@@ -59,50 +60,107 @@ try {
     console.log(`✓ Restored Company: ${comp.name} (${comp.id})`);
   }
 
-  // Normalize Users and Memberships
-  // Staff entries provide user identity + company membership + reporting lines
+  // Determine arrays depending on backup format (rich format vs legacy live format)
   const rawUsers = backup.users || [];
-  const rawStaff = backup.staff || backup.memberships || [];
+  const rawStaff = backup.staff || (backup.memberships && !backup.memberships[0]?.teamId ? backup.memberships : []);
   const rawMemberships = backup.companyMemberships || [];
+  const rawTeamMemberships = backup.teamMemberships || (backup.memberships && backup.memberships[0]?.teamId ? backup.memberships : []);
 
-  // Consolidate unique users
+  // Consolidate known user profiles
   const userMap = new Map();
   for (const u of rawUsers) {
     if (u.id) userMap.set(u.id, { id: u.id, name: u.name || "", email: u.email || "", image: u.image || null });
   }
   for (const s of rawStaff) {
     const uid = s.userId || s.id;
-    if (uid && !userMap.has(uid)) {
-      userMap.set(uid, { id: uid, name: s.name || "", email: s.email || "", image: null });
+    if (uid) {
+      const existing = userMap.get(uid);
+      userMap.set(uid, {
+        id: uid,
+        name: s.name || existing?.name || "",
+        email: s.email || existing?.email || "",
+        image: s.image || existing?.image || null,
+      });
     }
   }
 
-  // 2. Restore Users & Auth Credentials
+  // Collect ALL user IDs referenced across all backup entities to prevent foreign key violations
+  const referencedUserIds = new Set();
+  function addUserId(uid) {
+    if (uid && typeof uid === "string" && uid.trim().length > 0) {
+      referencedUserIds.add(uid.trim());
+    }
+  }
+
+  for (const u of rawUsers) addUserId(u.id);
+  for (const s of rawStaff) addUserId(s.userId || s.id);
+  for (const m of rawMemberships) addUserId(m.userId);
+  for (const tm of rawTeamMemberships) addUserId(tm.userId);
+  for (const t of backup.teams || []) addUserId(t.leadUserId);
+  for (const c of backup.cycles || []) addUserId(c.createdBy);
+  for (const o of backup.objectives || []) {
+    addUserId(o.ownerId);
+    addUserId(o.createdBy);
+    addUserId(o.approvedBy);
+  }
+  for (const kr of backup.keyResults || []) addUserId(kr.ownerId);
+  for (const ci of backup.checkIns || []) addUserId(ci.authorId);
+  for (const cm of backup.comments || []) addUserId(cm.authorId);
+  for (const al of backup.auditLogs || []) addUserId(al.actorId);
+
+  // 2. Restore Users & Auth Credentials (Ensuring every referenced user exists)
   let usersRestored = 0;
-  for (const user of userMap.values()) {
-    if (!user.email) continue;
-    console.log(`  Restoring user ${user.name} (${user.email}, ${user.id})...`);
+  for (const uid of referencedUserIds) {
+    const profile = userMap.get(uid);
+    let name = profile?.name;
+    let email = profile?.email;
+    let image = profile?.image || null;
+
+    // Check if user already exists in database
+    const existing = await client.query(`SELECT id, name, email, image FROM "user" WHERE id = $1`, [uid]);
+    if (existing.rowCount > 0) {
+      name = name || existing.rows[0].name;
+      email = email || existing.rows[0].email;
+      image = image || existing.rows[0].image;
+    }
+
+    // If email is still missing, synthesize a valid unique email
+    if (!email || email.trim() === "") {
+      const cleanUid = uid.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 16);
+      email = `user-${cleanUid}@recovery.local`;
+      name = name || `Staff Member (${uid.slice(0, 8)})`;
+    }
+
+    // Guard against unique constraint violation on email if another user has this exact email
+    const emailConflict = await client.query(
+      `SELECT id FROM "user" WHERE email = $1 AND id <> $2`,
+      [email, uid]
+    );
+    if (emailConflict.rowCount > 0) {
+      email = `user-${uid.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 10)}-${Date.now()}@recovery.local`;
+    }
+
     await client.query(
       `INSERT INTO "user" (id, name, email, email_verified, image, created_at, updated_at)
        VALUES ($1, $2, $3, true, $4, NOW(), NOW())
        ON CONFLICT (id) DO UPDATE SET
-         name = EXCLUDED.name,
-         email = EXCLUDED.email,
-         image = EXCLUDED.image,
+         name = COALESCE(NULLIF(EXCLUDED.name, ''), "user".name),
+         email = COALESCE(NULLIF(EXCLUDED.email, ''), "user".email),
+         image = COALESCE(EXCLUDED.image, "user".image),
          updated_at = NOW()`,
-      [user.id, user.name, user.email, user.image]
+      [uid, name || "Staff User", email, image]
     );
 
     // Ensure account record exists for password logins
     const existingAccount = await client.query(
       `SELECT id FROM account WHERE user_id = $1 AND provider_id = 'credential'`,
-      [user.id]
+      [uid]
     );
     if (existingAccount.rowCount === 0) {
       await client.query(
         `INSERT INTO account (id, account_id, provider_id, user_id, password, created_at, updated_at)
          VALUES (gen_random_uuid()::text, $1, 'credential', $1, $2, NOW(), NOW())`,
-        [user.id, defaultPasswordHash]
+        [uid, defaultPasswordHash]
       );
     }
     usersRestored++;
@@ -142,6 +200,26 @@ try {
     }
   }
 
+  // Ensure every referenced user has a company membership
+  if (backup.company?.id) {
+    let hasAdmin = Array.from(membershipMap.values()).some((m) => m.role === "admin");
+    for (const uid of referencedUserIds) {
+      if (!membershipMap.has(uid)) {
+        membershipMap.set(uid, {
+          id: crypto.randomUUID(),
+          companyId: backup.company.id,
+          userId: uid,
+          role: !hasAdmin ? "admin" : "member",
+          managerId: null,
+          jobTitle: "",
+          isActive: true,
+          deactivatedAt: null,
+        });
+        if (!hasAdmin) hasAdmin = true;
+      }
+    }
+  }
+
   // 3. Restore Company Memberships (Pass 1 - Unlinked hierarchy to satisfy foreign keys)
   let membershipsRestored = 0;
   for (const m of membershipMap.values()) {
@@ -169,7 +247,6 @@ try {
   let managerLinesLinked = 0;
   for (const m of membershipMap.values()) {
     if (m.managerId) {
-      // Check if manager user exists
       const mgrExists = await client.query(`SELECT id FROM "user" WHERE id = $1`, [m.managerId]);
       if (mgrExists.rowCount > 0 && m.managerId !== m.userId) {
         await client.query(
@@ -191,6 +268,14 @@ try {
   let teamsRestored = 0;
   for (const t of teams) {
     if (!t.id || !t.companyId || !t.name) continue;
+
+    // Validate lead_user_id
+    let leadId = t.leadUserId || null;
+    if (leadId) {
+      const exists = await client.query(`SELECT id FROM "user" WHERE id = $1`, [leadId]);
+      if (exists.rowCount === 0) leadId = null;
+    }
+
     await client.query(
       `INSERT INTO teams (id, company_id, name, description, lead_user_id, archived_at, created_at, updated_at)
        VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7::timestamptz, NOW()), COALESCE($8::timestamptz, NOW()))
@@ -200,17 +285,22 @@ try {
          lead_user_id = EXCLUDED.lead_user_id,
          archived_at = EXCLUDED.archived_at,
          updated_at = NOW()`,
-      [t.id, t.companyId, t.name, t.description || "", t.leadUserId || null, t.archivedAt || null, t.createdAt || null, t.updatedAt || null]
+      [t.id, t.companyId, t.name, t.description || "", leadId, t.archivedAt || null, t.createdAt || null, t.updatedAt || null]
     );
     teamsRestored++;
   }
   console.log(`✓ Restored ${teamsRestored} Teams`);
 
   // 6. Restore Team Memberships
-  const teamMemberships = backup.teamMemberships || [];
   let teamMembershipsRestored = 0;
-  for (const tm of teamMemberships) {
+  for (const tm of rawTeamMemberships) {
     if (!tm.teamId || !tm.userId || !tm.companyId) continue;
+
+    // Verify team and user exist
+    const teamExists = await client.query(`SELECT id FROM teams WHERE id = $1`, [tm.teamId]);
+    const userExists = await client.query(`SELECT id FROM "user" WHERE id = $1`, [tm.userId]);
+    if (teamExists.rowCount === 0 || userExists.rowCount === 0) continue;
+
     await client.query(
       `INSERT INTO team_memberships (id, company_id, team_id, user_id, is_lead, created_at)
        VALUES (COALESCE($1::uuid, gen_random_uuid()), $2, $3, $4, $5, COALESCE($6::timestamptz, NOW()))
@@ -259,6 +349,19 @@ try {
   let objectivesRestored = 0;
   for (const obj of objectives) {
     if (!obj.id || !obj.companyId || !obj.cycleId || !obj.title) continue;
+
+    let ownerId = obj.ownerId || null;
+    if (ownerId) {
+      const exists = await client.query(`SELECT id FROM "user" WHERE id = $1`, [ownerId]);
+      if (exists.rowCount === 0) ownerId = null;
+    }
+
+    let teamId = obj.teamId || null;
+    if (teamId) {
+      const exists = await client.query(`SELECT id FROM teams WHERE id = $1`, [teamId]);
+      if (exists.rowCount === 0) teamId = null;
+    }
+
     await client.query(
       `INSERT INTO objectives (
          id, company_id, cycle_id, title, description, progress, level, team_id,
@@ -288,8 +391,8 @@ try {
          updated_at = NOW()`,
       [
         obj.id, obj.companyId, obj.cycleId, obj.title, obj.description || "",
-        obj.progress || "0", obj.level || "company", obj.teamId || null,
-        obj.ownerId || null, obj.dueDate || null, obj.status || "active",
+        obj.progress || "0", obj.level || "company", teamId,
+        ownerId, obj.dueDate || null, obj.status || "active",
         obj.approvalStatus || "approved", obj.approvedBy || null, obj.approvedAt || null,
         obj.visibility || "company", obj.copiedFromObjectiveId || null,
         obj.archivedAt || null, obj.version || 1, obj.createdBy,
@@ -303,13 +406,16 @@ try {
   let parentAlignmentsLinked = 0;
   for (const obj of objectives) {
     if (obj.parentObjectiveId) {
-      await client.query(
-        `UPDATE objectives
-         SET parent_objective_id = $1, updated_at = NOW()
-         WHERE id = $2`,
-        [obj.parentObjectiveId, obj.id]
-      );
-      parentAlignmentsLinked++;
+      const parentExists = await client.query(`SELECT id FROM objectives WHERE id = $1`, [obj.parentObjectiveId]);
+      if (parentExists.rowCount > 0 && obj.parentObjectiveId !== obj.id) {
+        await client.query(
+          `UPDATE objectives
+           SET parent_objective_id = $1, updated_at = NOW()
+           WHERE id = $2`,
+          [obj.parentObjectiveId, obj.id]
+        );
+        parentAlignmentsLinked++;
+      }
     }
   }
   console.log(`✓ Restored ${objectivesRestored} Objectives (${parentAlignmentsLinked} parent alignments linked)`);
@@ -319,6 +425,17 @@ try {
   let keyResultsRestored = 0;
   for (const kr of keyResults) {
     if (!kr.id || !kr.companyId || !kr.objectiveId || !kr.title) continue;
+
+    // Verify parent objective exists
+    const objExists = await client.query(`SELECT id FROM objectives WHERE id = $1`, [kr.objectiveId]);
+    if (objExists.rowCount === 0) continue;
+
+    let ownerId = kr.ownerId || null;
+    if (ownerId) {
+      const exists = await client.query(`SELECT id FROM "user" WHERE id = $1`, [ownerId]);
+      if (exists.rowCount === 0) ownerId = null;
+    }
+
     await client.query(
       `INSERT INTO key_results (
          id, company_id, objective_id, title, metric_type, direction, unit,
@@ -350,7 +467,7 @@ try {
       [
         kr.id, kr.companyId, kr.objectiveId, kr.title, kr.metricType || "numeric",
         kr.direction || "increasing", kr.unit || "", kr.baseline || "0", kr.target || "100",
-        kr.current || "0", kr.progress || "0", kr.ownerId || null, kr.dueDate || null,
+        kr.current || "0", kr.progress || "0", ownerId, kr.dueDate || null,
         kr.confidence || "on_track", kr.lastCheckInAt || null, kr.lastEffectiveDate || null,
         kr.archivedAt || null, kr.version || 1, kr.createdAt || null, kr.updatedAt || null
       ]
@@ -364,6 +481,10 @@ try {
   let checkInsRestored = 0;
   for (const ci of checkIns) {
     if (!ci.id || !ci.companyId || !ci.keyResultId) continue;
+
+    const krExists = await client.query(`SELECT id FROM key_results WHERE id = $1`, [ci.keyResultId]);
+    if (krExists.rowCount === 0) continue;
+
     await client.query(
       `INSERT INTO kr_check_ins (
          id, company_id, cycle_id, objective_id, key_result_id, author_id,
@@ -396,6 +517,10 @@ try {
   let commentsRestored = 0;
   for (const cm of comments) {
     if (!cm.id || !cm.companyId || !cm.objectiveId) continue;
+
+    const objExists = await client.query(`SELECT id FROM objectives WHERE id = $1`, [cm.objectiveId]);
+    if (objExists.rowCount === 0) continue;
+
     await client.query(
       `INSERT INTO goal_comments (
          id, company_id, objective_id, key_result_id, author_id, body, mentions, created_at
@@ -462,8 +587,10 @@ try {
   console.log(`\n=======================================================`);
   console.log(` RESTORE COMPLETED SUCCESSFULLY!`);
   console.log(` - Company: ${backup.company?.name}`);
-  console.log(` - Staff Directory: ${staffRestoredCount(backup)} records`);
+  console.log(` - Users Provisioned: ${usersRestored}`);
+  console.log(` - Company Memberships: ${membershipsRestored}`);
   console.log(` - Manager Reporting Lines: ${managerLinesLinked} links`);
+  console.log(` - Teams Restored: ${teamsRestored}`);
   console.log(` - OKR Objectives: ${objectivesRestored}`);
   console.log(` - Key Results: ${keyResultsRestored}`);
   console.log(` - Default Login Password for Restored Users: RecoveryPass123!`);
@@ -474,8 +601,4 @@ try {
   process.exit(1);
 } finally {
   await client.end();
-}
-
-function staffRestoredCount(b) {
-  return (b.staff || b.memberships || b.companyMemberships || []).length;
 }
