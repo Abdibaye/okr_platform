@@ -44,7 +44,13 @@ DATABASE_URL="postgresql://..." pg_dump \
 * **Point-In-Time Restore (PITR) & WAL Archiving**: For production environments configured with continuous Write-Ahead Logging (WAL) or managed cloud snapshots, point-in-time recovery allows rolling back to any specific transaction timestamp prior to an accidental change or data loss.
 
 ### B. Portable Admin JSON Export (`/api/exports/backup`)
-Admins can download a portable JSON export snapshot containing `company`, `cycles`, `teams`, `memberships`, `objectives`, `keyResults`, `checkIns`, `goalComments`, and `auditLogs`. This acts as an auxiliary verification and compliance snapshot.
+Admins can download a portable JSON export snapshot (`GET /api/exports/backup`) containing:
+* `company`: Company profile and workspace settings.
+* `staff`: Complete staff directory with user identities (`name`, `email`), workspace roles (`admin`, `manager`, `member`), and manager reporting lines (`managerId`, `managerName`, `managerEmail`).
+* `users`: Canonical user accounts (`id`, `name`, `email`, `image`).
+* `companyMemberships`: Tenant-scoped membership records with roles, reporting lines, and job titles.
+* `teamMemberships` & `teams`: Departmental allocations and team rosters.
+* `cycles`, `objectives`, `keyResults`, `checkIns`, `comments`, and `auditLogs`: Complete OKR tree and historical ledgers.
 
 ### C. Staff Roster CSV Export (`docs/templates/employees-import-template.csv`)
 Human-readable organizational snapshots can be maintained using the standard CSV roster format:
