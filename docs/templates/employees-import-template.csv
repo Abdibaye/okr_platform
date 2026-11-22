@@ -1,8 +1,7 @@
 email,name,role,manager_email,team_name,job_title,status
-ceo@company.test,Eleanor Vance,admin,,Executive,Chief Executive Officer,active
-vp.eng@company.test,Marcus Brody,manager,ceo@company.test,Engineering,VP of Engineering,active
-lead.dev@company.test,Sophia Chen,member,vp.eng@company.test,Engineering,Staff Software Engineer,active
-vp.product@company.test,David Kim,manager,ceo@company.test,Product,VP of Product,active
-pm.growth@company.test,Amina Idris,member,vp.product@company.test,Product,Senior Product Manager,active
-head.sales@company.test,Rachel Green,manager,ceo@company.test,Sales,Head of Global Sales,active
-ae.enterprise@company.test,Lucas Miller,member,head.sales@company.test,Sales,Account Executive,active
+james.thomas@astu.test,James Thomas,admin,,team 01,Chief Technology Officer / Administrator,active
+workspace.manager@gmail.com,Workspace Manager,manager,james.thomas@astu.test,team 01,Engineering & Workspace Manager,active
+lead.dev@astu.test,David Chen,member,workspace.manager@gmail.com,team 01,Lead Software Engineer,active
+product.spec@astu.test,Sarah Connor,member,workspace.manager@gmail.com,team 01,Product Specialist,active
+qa.lead@astu.test,Alex Rivera,member,workspace.manager@gmail.com,QA remaining scope — Team A,Quality Assurance Lead,active
+ops.analyst@astu.test,Elena Rostova,member,james.thomas@astu.test,team 01,Operations Analyst,active

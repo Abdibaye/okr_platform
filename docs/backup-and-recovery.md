@@ -35,20 +35,19 @@ To understand how staff roles and reporting lines are protected, it is essential
 The repository includes a ready-to-use, complete recovery file located at:
 - `docs/recovery/workspace-recovery.json`
 
-This recovery snapshot contains a fully populated, verified organizational dataset:
-* **Company Profile**: Complete tenant metadata (`id`, `name`).
-* **Staff Directory & Identities (`staff` & `users`)**: 7 full employee profiles spanning Executive, Engineering, Product, and Sales departments.
+This recovery snapshot contains the full, verified production dataset from the published application (**ASTU Corp**):
+* **Company Profile**: Complete tenant metadata (`id`: `d868c22c-84fe-4afb-be8c-95d21f8c56eb`, `name`: `ASTU Corp`).
+* **Staff Directory & Identities (`staff` & `users`)**: 6 employee profiles spanning Executive Administration, Engineering, Product, QA, and Operations.
 * **Workspace Roles**: Exact permission assignments (`admin`, `manager`, `member`).
 * **Manager Reporting Lines**: Intact multi-tier organizational hierarchy:
-  - Eleanor Vance (CEO, `admin`, top of hierarchy)
-    - Marcus Brody (VP of Engineering, `manager`) → reports to Eleanor Vance
-      - Sophia Chen (Staff Software Engineer, `member`) → reports to Marcus Brody
-    - David Kim (VP of Product, `manager`) → reports to Eleanor Vance
-      - Amina Idris (Senior Product Manager, `member`) → reports to David Kim
-    - Rachel Green (Head of Global Sales, `manager`) → reports to Eleanor Vance
-      - Lucas Miller (Account Executive, `member`) → reports to Rachel Green
-* **Teams & Rosters**: Executive, Engineering, Product, Sales teams with designated leads and members.
-* **Cycles & OKR Trees**: Q4 2026 cycle, strategic company objectives, team objectives, individual goals, key results with numeric/percentage/currency metrics, check-in history, comments, and audit trail.
+  - James Thomas (`james.thomas@astu.test`, CTO / `admin`, top of hierarchy)
+    - Workspace Manager (`workspace.manager@gmail.com`, `manager`) → reports to James Thomas
+      - David Chen (`lead.dev@astu.test`, Lead Software Engineer, `member`) → reports to Workspace Manager
+      - Sarah Connor (`product.spec@astu.test`, Product Specialist, `member`) → reports to Workspace Manager
+      - Alex Rivera (`qa.lead@astu.test`, Quality Assurance Lead, `member`) → reports to Workspace Manager
+    - Elena Rostova (`ops.analyst@astu.test`, Operations Analyst, `member`) → reports to James Thomas
+* **Teams & Rosters**: 3 teams (`team 01` with lead James Thomas, `QA remaining scope — Team A`, `QA forbidden team`).
+* **Cycles & OKR Trees**: 6 planning cycles (`Q4 2026`, `QA review 2026-11-19`, `QA carry-forward 2026-11-19`, `QA remaining scope 2026-11-19`, `Client QA 21Nov acceptance 8dcf`, `Client QA 22Nov KR restore 93b24`), 35 objectives, 22 key results with numeric/percentage metrics, 38 check-in records, 6 goal comments, and 167 immutable audit logs.
 
 ### B. Portable Admin JSON Export (`/api/exports/backup`)
 Admins can download an on-demand JSON export snapshot directly from the platform (`GET /api/exports/backup`). The export engine executes relational joins across `companyMemberships` and `user` to export:
@@ -76,9 +75,9 @@ DATABASE_URL="postgresql://user:pass@host:5432/dbname?sslmode=require" pg_dump \
 Human-readable organizational snapshots can be maintained using the standard CSV roster format:
 ```csv
 email,name,role,manager_email,team_name,job_title,status
-ceo@company.test,Eleanor Vance,admin,,Executive,Chief Executive Officer,active
-vp.eng@company.test,Marcus Brody,manager,ceo@company.test,Engineering,VP of Engineering,active
-lead.dev@company.test,Sophia Chen,member,vp.eng@company.test,Engineering,Staff Software Engineer,active
+james.thomas@astu.test,James Thomas,admin,,team 01,Chief Technology Officer / Administrator,active
+workspace.manager@gmail.com,Workspace Manager,manager,james.thomas@astu.test,team 01,Engineering & Workspace Manager,active
+lead.dev@astu.test,David Chen,member,workspace.manager@gmail.com,team 01,Lead Software Engineer,active
 ```
 Using `manager_email` instead of internal database UUIDs ensures the hierarchy is human-auditable and completely portable across environments.
 
@@ -203,9 +202,9 @@ WHERE role = 'admin' AND is_active = true;
 1. **Health Check**:
    - `GET /api/health` must return `{"status":"ok"}`.
 2. **Access & Permissions**:
-   - Sign in as an **Admin** (`ceo@company.test` / `RecoveryPass123!`): verify full access to `/dashboard/team` (User Management) and `/dashboard/reports`.
-   - Sign in as a **Manager** (`vp.eng@company.test` / `RecoveryPass123!`): verify ability to view direct reports' restricted goals and issue check-in requests.
-   - Sign in as a **Member** (`lead.dev@company.test` / `RecoveryPass123!`): verify restricted visibility boundaries and that `/api/exports/backup` returns **HTTP 403 Forbidden**.
+   - Sign in as an **Admin** (`james.thomas@astu.test` / `RecoveryPass123!`): verify full access to `/dashboard/team` (User Management) and `/dashboard/reports`.
+   - Sign in as a **Manager** (`workspace.manager@gmail.com` / `RecoveryPass123!`): verify ability to view direct reports' restricted goals and issue check-in requests.
+   - Sign in as a **Member** (`lead.dev@astu.test` / `RecoveryPass123!`): verify restricted visibility boundaries and that `/api/exports/backup` returns **HTTP 403 Forbidden**.
 3. **Manager Check-In Request Engine**:
    - Test `POST /api/reminders/request` for a subordinate KR. Verify that the system correctly looks up the manager chain and dispatches the in-app notification.
 4. **Data Rollups**:
