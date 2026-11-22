@@ -37,15 +37,15 @@ The repository includes a ready-to-use, complete recovery file located at:
 
 This recovery snapshot contains the full, verified production dataset from the published application (**ASTU Corp**):
 * **Company Profile**: Complete tenant metadata (`id`: `d868c22c-84fe-4afb-be8c-95d21f8c56eb`, `name`: `ASTU Corp`).
-* **Staff Directory & Identities (`staff` & `users`)**: 6 employee profiles spanning Executive Administration, Engineering, Product, QA, and Operations.
+* **Staff Directory & Identities (`staff` & `users`)**: 6 employee profiles matching the live ASTU Corp User Management directory:
 * **Workspace Roles**: Exact permission assignments (`admin`, `manager`, `member`).
 * **Manager Reporting Lines**: Intact multi-tier organizational hierarchy:
-  - James Thomas (`james.thomas@astu.test`, CTO / `admin`, top of hierarchy)
-    - Workspace Manager (`workspace.manager@gmail.com`, `manager`) → reports to James Thomas
-      - David Chen (`lead.dev@astu.test`, Lead Software Engineer, `member`) → reports to Workspace Manager
-      - Sarah Connor (`product.spec@astu.test`, Product Specialist, `member`) → reports to Workspace Manager
-      - Alex Rivera (`qa.lead@astu.test`, Quality Assurance Lead, `member`) → reports to Workspace Manager
-    - Elena Rostova (`ops.analyst@astu.test`, Operations Analyst, `member`) → reports to James Thomas
+  - James Thomas (`workspace.admin@gmail.com`, Administrator / `admin`, top of hierarchy)
+    - Daniel Matthew (`workspace.manager@gmail.com`, Workspace Manager / `manager`) → reports to James Thomas
+      - Mark Steven (`workspace.member@gmail.com`, Team Member, `member`) → reports to Daniel Matthew
+      - Abdi Test (`abdibaye0902@gmail.com`, Engineer, `member`) → reports to Daniel Matthew
+      - QA scope invitee (`qa-okr-20261119@example.invalid`, QA Tester, `member`) → reports to Daniel Matthew
+      - Client QA controlled inbox (`sourabh+alineo-qa-20261121@neander.ai`, Client Reviewer, `member`) → reports to Daniel Matthew
 * **Teams & Rosters**: 3 teams (`team 01` with lead James Thomas, `QA remaining scope — Team A`, `QA forbidden team`).
 * **Cycles & OKR Trees**: 6 planning cycles (`Q4 2026`, `QA review 2026-11-19`, `QA carry-forward 2026-11-19`, `QA remaining scope 2026-11-19`, `Client QA 21Nov acceptance 8dcf`, `Client QA 22Nov KR restore 93b24`), 35 objectives, 22 key results with numeric/percentage metrics, 38 check-in records, 6 goal comments, and 167 immutable audit logs.
 
@@ -75,9 +75,10 @@ DATABASE_URL="postgresql://user:pass@host:5432/dbname?sslmode=require" pg_dump \
 Human-readable organizational snapshots can be maintained using the standard CSV roster format:
 ```csv
 email,name,role,manager_email,team_name,job_title,status
-james.thomas@astu.test,James Thomas,admin,,team 01,Chief Technology Officer / Administrator,active
-workspace.manager@gmail.com,Workspace Manager,manager,james.thomas@astu.test,team 01,Engineering & Workspace Manager,active
-lead.dev@astu.test,David Chen,member,workspace.manager@gmail.com,team 01,Lead Software Engineer,active
+workspace.admin@gmail.com,James Thomas,admin,,team 01,Administrator,active
+workspace.manager@gmail.com,Daniel Matthew,manager,workspace.admin@gmail.com,team 01,Workspace Manager,active
+workspace.member@gmail.com,Mark Steven,member,workspace.manager@gmail.com,team 01,Team Member,active
+abdibaye0902@gmail.com,Abdi Test,member,workspace.manager@gmail.com,team 01,Engineer,active
 ```
 Using `manager_email` instead of internal database UUIDs ensures the hierarchy is human-auditable and completely portable across environments.
 
@@ -202,9 +203,9 @@ WHERE role = 'admin' AND is_active = true;
 1. **Health Check**:
    - `GET /api/health` must return `{"status":"ok"}`.
 2. **Access & Permissions**:
-   - Sign in as an **Admin** (`james.thomas@astu.test` / `RecoveryPass123!`): verify full access to `/dashboard/team` (User Management) and `/dashboard/reports`.
+   - Sign in as an **Admin** (`workspace.admin@gmail.com` / `RecoveryPass123!`): verify full access to `/dashboard/team` (User Management) and `/dashboard/reports`.
    - Sign in as a **Manager** (`workspace.manager@gmail.com` / `RecoveryPass123!`): verify ability to view direct reports' restricted goals and issue check-in requests.
-   - Sign in as a **Member** (`lead.dev@astu.test` / `RecoveryPass123!`): verify restricted visibility boundaries and that `/api/exports/backup` returns **HTTP 403 Forbidden**.
+   - Sign in as a **Member** (`workspace.member@gmail.com` / `RecoveryPass123!`): verify restricted visibility boundaries and that `/api/exports/backup` returns **HTTP 403 Forbidden**.
 3. **Manager Check-In Request Engine**:
    - Test `POST /api/reminders/request` for a subordinate KR. Verify that the system correctly looks up the manager chain and dispatches the in-app notification.
 4. **Data Rollups**:

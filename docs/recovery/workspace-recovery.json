@@ -1,5 +1,5 @@
 {
-  "exportedAt": "2026-11-22T15:08:58.141Z",
+  "exportedAt": "2026-11-22T19:33:29.075Z",
   "company": {
     "id": "d868c22c-84fe-4afb-be8c-95d21f8c56eb",
     "name": "ASTU Corp",
@@ -10,8 +10,8 @@
       "id": "9b0296ad-9223-4f02-9651-f4b690a59506",
       "companyId": "d868c22c-84fe-4afb-be8c-95d21f8c56eb",
       "name": "Q4 2026",
-      "startDate": "2026-09-30T21:00:00.000Z",
-      "endDate": "2026-12-30T21:00:00.000Z",
+      "startDate": "2026-09-29T21:00:00.000Z",
+      "endDate": "2026-12-29T21:00:00.000Z",
       "status": "open",
       "finalReflection": "",
       "requireApproval": false,
@@ -20,14 +20,14 @@
       "version": 1,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-19T11:44:54.743Z",
-      "updatedAt": "2026-11-19T11:44:54.743Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "fb825ddc-001b-401c-843c-7964c3bd89d1",
       "companyId": "d868c22c-84fe-4afb-be8c-95d21f8c56eb",
       "name": "QA review 2026-11-19",
-      "startDate": "2026-09-30T21:00:00.000Z",
-      "endDate": "2026-12-30T21:00:00.000Z",
+      "startDate": "2026-09-29T21:00:00.000Z",
+      "endDate": "2026-12-29T21:00:00.000Z",
       "status": "closed",
       "finalReflection": "Synthetic acceptance reflection; original Q4 cycle remains untouched.",
       "requireApproval": false,
@@ -36,14 +36,14 @@
       "version": 5,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-19T12:36:39.762Z",
-      "updatedAt": "2026-11-20T18:09:25.653Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "bd4839bb-261f-4faa-8349-4e02ef3ea416",
       "companyId": "d868c22c-84fe-4afb-be8c-95d21f8c56eb",
       "name": "Client QA 21Nov acceptance 8dcf",
-      "startDate": "2026-09-30T21:00:00.000Z",
-      "endDate": "2026-12-30T21:00:00.000Z",
+      "startDate": "2026-09-29T21:00:00.000Z",
+      "endDate": "2026-12-29T21:00:00.000Z",
       "status": "closed",
       "finalReflection": "Synthetic archived acceptance fixture",
       "requireApproval": false,
@@ -52,14 +52,14 @@
       "version": 7,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-21T03:34:15.522Z",
-      "updatedAt": "2026-11-21T03:39:04.628Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "cbe312d7-e75e-4222-8938-caaf374422a5",
       "companyId": "d868c22c-84fe-4afb-be8c-95d21f8c56eb",
       "name": "Client QA 22Nov KR restore 93b24",
-      "startDate": "2026-09-30T21:00:00.000Z",
-      "endDate": "2026-12-30T21:00:00.000Z",
+      "startDate": "2026-09-29T21:00:00.000Z",
+      "endDate": "2026-12-29T21:00:00.000Z",
       "status": "closed",
       "finalReflection": "Synthetic regression checks completed",
       "requireApproval": false,
@@ -68,14 +68,14 @@
       "version": 3,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-22T01:18:30.496Z",
-      "updatedAt": "2026-11-22T01:20:40.252Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "f419ad9c-1608-4e47-8ee2-3686de492c2e",
       "companyId": "d868c22c-84fe-4afb-be8c-95d21f8c56eb",
       "name": "QA remaining scope 2026-11-19",
-      "startDate": "2026-10-31T21:00:00.000Z",
-      "endDate": "2026-11-29T21:00:00.000Z",
+      "startDate": "2026-10-30T21:00:00.000Z",
+      "endDate": "2026-11-28T21:00:00.000Z",
       "status": "closed",
       "finalReflection": "Extended acceptance review complete. Synthetic data retained in archived cycle.",
       "requireApproval": true,
@@ -84,14 +84,14 @@
       "version": 7,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-19T13:11:24.820Z",
-      "updatedAt": "2026-11-19T13:24:34.826Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "6350e0af-9287-4c8d-995d-c531375e678d",
       "companyId": "d868c22c-84fe-4afb-be8c-95d21f8c56eb",
       "name": "QA carry-forward 2026-11-19",
-      "startDate": "2026-12-31T21:00:00.000Z",
-      "endDate": "2027-03-30T21:00:00.000Z",
+      "startDate": "2026-12-30T21:00:00.000Z",
+      "endDate": "2027-03-29T21:00:00.000Z",
       "status": "draft",
       "finalReflection": "",
       "requireApproval": false,
@@ -100,7 +100,7 @@
       "version": 1,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-19T12:47:27.106Z",
-      "updatedAt": "2026-11-19T12:52:31.520Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     }
   ],
   "teams": [
@@ -112,7 +112,7 @@
       "leadUserId": null,
       "archivedAt": "2026-11-19T13:24:29.703Z",
       "createdAt": "2026-11-19T13:11:24.192Z",
-      "updatedAt": "2026-11-19T13:24:29.703Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "23e61d3c-0b33-49bf-bd7b-786de849eccf",
@@ -122,7 +122,7 @@
       "leadUserId": null,
       "archivedAt": "2026-11-19T13:24:29.063Z",
       "createdAt": "2026-11-19T13:11:18.982Z",
-      "updatedAt": "2026-11-19T13:24:29.063Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "d1f3af68-24c9-40cb-a057-65a51c2d189c",
@@ -132,199 +132,175 @@
       "leadUserId": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
       "archivedAt": null,
       "createdAt": "2026-11-20T18:46:14.723Z",
-      "updatedAt": "2026-11-20T18:48:37.395Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     }
   ],
   "staff": [
     {
-      "id": "12213065-e501-4619-8d32-cd089eeaf132",
-      "userId": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
+      "id": "dc448e5b-b034-411f-a8ca-9215041228e5",
+      "userId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "name": "James Thomas",
-      "email": "james.thomas@astu.test",
+      "email": "workspace.admin@gmail.com",
       "role": "admin",
       "managerId": null,
       "managerName": null,
       "managerEmail": null,
-      "jobTitle": "Chief Technology Officer / Administrator",
+      "jobTitle": "Administrator",
       "isActive": true,
       "deactivatedAt": null,
       "createdAt": "2026-11-22T14:57:48.125Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
-      "id": "dc448e5b-b034-411f-a8ca-9215041228e5",
-      "userId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "name": "Workspace Manager",
+      "id": "12213065-e501-4619-8d32-cd089eeaf132",
+      "userId": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
+      "name": "Daniel Matthew",
       "email": "workspace.manager@gmail.com",
       "role": "manager",
-      "managerId": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
+      "managerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "managerName": "James Thomas",
-      "managerEmail": "james.thomas@astu.test",
-      "jobTitle": "Engineering & Workspace Manager",
+      "managerEmail": "workspace.admin@gmail.com",
+      "jobTitle": "Workspace Manager",
       "isActive": true,
       "deactivatedAt": null,
       "createdAt": "2026-11-22T14:57:48.125Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "ae209062-16db-43fa-930a-12780954382a",
       "userId": "PBDrMS7J1jvUlgThXW6yUI4dxlKBhrDG",
-      "name": "David Chen",
-      "email": "lead.dev@astu.test",
+      "name": "Mark Steven",
+      "email": "workspace.member@gmail.com",
       "role": "member",
-      "managerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "managerName": "Workspace Manager",
+      "managerId": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
+      "managerName": "Daniel Matthew",
       "managerEmail": "workspace.manager@gmail.com",
-      "jobTitle": "Lead Software Engineer",
+      "jobTitle": "Team Member",
       "isActive": true,
       "deactivatedAt": null,
       "createdAt": "2026-11-22T14:57:48.125Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
-    },
-    {
-      "id": "117c01fe-9ce7-41f2-a534-066869d5872a",
-      "userId": "ikCy9MvmmzReDXhs9lp8Hpj24jOVvzHD",
-      "name": "Sarah Connor",
-      "email": "product.spec@astu.test",
-      "role": "member",
-      "managerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "managerName": "Workspace Manager",
-      "managerEmail": "workspace.manager@gmail.com",
-      "jobTitle": "Product Specialist",
-      "isActive": true,
-      "deactivatedAt": null,
-      "createdAt": "2026-11-22T14:57:48.125Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
-    },
-    {
-      "id": "3ff80bd6-c7a1-4edf-9ff8-b53c4c6108ec",
-      "userId": "NM2Ck261785WU5e1ED2RGY7V5PeI2Vqk",
-      "name": "Alex Rivera",
-      "email": "qa.lead@astu.test",
-      "role": "member",
-      "managerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "managerName": "Workspace Manager",
-      "managerEmail": "workspace.manager@gmail.com",
-      "jobTitle": "Quality Assurance Lead",
-      "isActive": true,
-      "deactivatedAt": null,
-      "createdAt": "2026-11-22T14:57:48.125Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "37e58a2b-721e-46dc-bfff-6877aaa7a808",
       "userId": "LuLrKoHOmER28W7TWc8dgQqOsDOXjQyT",
-      "name": "Elena Rostova",
-      "email": "ops.analyst@astu.test",
+      "name": "Abdi Test",
+      "email": "abdibaye0902@gmail.com",
       "role": "member",
       "managerId": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
-      "managerName": "James Thomas",
-      "managerEmail": "james.thomas@astu.test",
-      "jobTitle": "Operations Analyst",
+      "managerName": "Daniel Matthew",
+      "managerEmail": "workspace.manager@gmail.com",
+      "jobTitle": "Engineer",
       "isActive": true,
       "deactivatedAt": null,
       "createdAt": "2026-11-22T14:57:48.125Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
+    },
+    {
+      "id": "3ff80bd6-c7a1-4edf-9ff8-b53c4c6108ec",
+      "userId": "NM2Ck261785WU5e1ED2RGY7V5PeI2Vqk",
+      "name": "QA scope invitee",
+      "email": "qa-okr-20261119@example.invalid",
+      "role": "member",
+      "managerId": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
+      "managerName": "Daniel Matthew",
+      "managerEmail": "workspace.manager@gmail.com",
+      "jobTitle": "QA Tester",
+      "isActive": false,
+      "deactivatedAt": "2026-11-20T10:00:00.000Z",
+      "createdAt": "2026-11-22T14:57:48.125Z",
+      "updatedAt": "2026-11-22T15:09:28.119Z"
+    },
+    {
+      "id": "117c01fe-9ce7-41f2-a534-066869d5872a",
+      "userId": "ikCy9MvmmzReDXhs9lp8Hpj24jOVvzHD",
+      "name": "Client QA controlled inbox",
+      "email": "sourabh+alineo-qa-20261121@neander.ai",
+      "role": "member",
+      "managerId": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
+      "managerName": "Daniel Matthew",
+      "managerEmail": "workspace.manager@gmail.com",
+      "jobTitle": "Client QA Reviewer",
+      "isActive": false,
+      "deactivatedAt": "2026-11-21T10:00:00.000Z",
+      "createdAt": "2026-11-22T14:57:48.125Z",
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     }
   ],
   "users": [
     {
-      "id": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
+      "id": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "name": "James Thomas",
-      "email": "james.thomas@astu.test",
+      "email": "workspace.admin@gmail.com",
       "image": null
     },
     {
-      "id": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "name": "Workspace Manager",
+      "id": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
+      "name": "Daniel Matthew",
       "email": "workspace.manager@gmail.com",
       "image": null
     },
     {
       "id": "PBDrMS7J1jvUlgThXW6yUI4dxlKBhrDG",
-      "name": "David Chen",
-      "email": "lead.dev@astu.test",
-      "image": null
-    },
-    {
-      "id": "ikCy9MvmmzReDXhs9lp8Hpj24jOVvzHD",
-      "name": "Sarah Connor",
-      "email": "product.spec@astu.test",
-      "image": null
-    },
-    {
-      "id": "NM2Ck261785WU5e1ED2RGY7V5PeI2Vqk",
-      "name": "Alex Rivera",
-      "email": "qa.lead@astu.test",
+      "name": "Mark Steven",
+      "email": "workspace.member@gmail.com",
       "image": null
     },
     {
       "id": "LuLrKoHOmER28W7TWc8dgQqOsDOXjQyT",
-      "name": "Elena Rostova",
-      "email": "ops.analyst@astu.test",
+      "name": "Abdi Test",
+      "email": "abdibaye0902@gmail.com",
+      "image": null
+    },
+    {
+      "id": "NM2Ck261785WU5e1ED2RGY7V5PeI2Vqk",
+      "name": "QA scope invitee",
+      "email": "qa-okr-20261119@example.invalid",
+      "image": null
+    },
+    {
+      "id": "ikCy9MvmmzReDXhs9lp8Hpj24jOVvzHD",
+      "name": "Client QA controlled inbox",
+      "email": "sourabh+alineo-qa-20261121@neander.ai",
       "image": null
     }
   ],
   "companyMemberships": [
     {
-      "id": "12213065-e501-4619-8d32-cd089eeaf132",
-      "companyId": "d868c22c-84fe-4afb-be8c-95d21f8c56eb",
-      "userId": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
-      "role": "admin",
-      "managerId": null,
-      "jobTitle": "Chief Technology Officer / Administrator",
-      "isActive": true,
-      "deactivatedAt": null,
-      "createdAt": "2026-11-22T14:57:48.125Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
-    },
-    {
       "id": "dc448e5b-b034-411f-a8ca-9215041228e5",
       "companyId": "d868c22c-84fe-4afb-be8c-95d21f8c56eb",
       "userId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "role": "manager",
-      "managerId": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
-      "jobTitle": "Engineering & Workspace Manager",
+      "role": "admin",
+      "managerId": null,
+      "jobTitle": "Administrator",
       "isActive": true,
       "deactivatedAt": null,
       "createdAt": "2026-11-22T14:57:48.125Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
+    },
+    {
+      "id": "12213065-e501-4619-8d32-cd089eeaf132",
+      "companyId": "d868c22c-84fe-4afb-be8c-95d21f8c56eb",
+      "userId": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
+      "role": "manager",
+      "managerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
+      "jobTitle": "Workspace Manager",
+      "isActive": true,
+      "deactivatedAt": null,
+      "createdAt": "2026-11-22T14:57:48.125Z",
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "ae209062-16db-43fa-930a-12780954382a",
       "companyId": "d868c22c-84fe-4afb-be8c-95d21f8c56eb",
       "userId": "PBDrMS7J1jvUlgThXW6yUI4dxlKBhrDG",
       "role": "member",
-      "managerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "jobTitle": "Lead Software Engineer",
+      "managerId": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
+      "jobTitle": "Team Member",
       "isActive": true,
       "deactivatedAt": null,
       "createdAt": "2026-11-22T14:57:48.125Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
-    },
-    {
-      "id": "117c01fe-9ce7-41f2-a534-066869d5872a",
-      "companyId": "d868c22c-84fe-4afb-be8c-95d21f8c56eb",
-      "userId": "ikCy9MvmmzReDXhs9lp8Hpj24jOVvzHD",
-      "role": "member",
-      "managerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "jobTitle": "Product Specialist",
-      "isActive": true,
-      "deactivatedAt": null,
-      "createdAt": "2026-11-22T14:57:48.125Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
-    },
-    {
-      "id": "3ff80bd6-c7a1-4edf-9ff8-b53c4c6108ec",
-      "companyId": "d868c22c-84fe-4afb-be8c-95d21f8c56eb",
-      "userId": "NM2Ck261785WU5e1ED2RGY7V5PeI2Vqk",
-      "role": "member",
-      "managerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "jobTitle": "Quality Assurance Lead",
-      "isActive": true,
-      "deactivatedAt": null,
-      "createdAt": "2026-11-22T14:57:48.125Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "37e58a2b-721e-46dc-bfff-6877aaa7a808",
@@ -332,11 +308,35 @@
       "userId": "LuLrKoHOmER28W7TWc8dgQqOsDOXjQyT",
       "role": "member",
       "managerId": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
-      "jobTitle": "Operations Analyst",
+      "jobTitle": "Engineer",
       "isActive": true,
       "deactivatedAt": null,
       "createdAt": "2026-11-22T14:57:48.125Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
+    },
+    {
+      "id": "3ff80bd6-c7a1-4edf-9ff8-b53c4c6108ec",
+      "companyId": "d868c22c-84fe-4afb-be8c-95d21f8c56eb",
+      "userId": "NM2Ck261785WU5e1ED2RGY7V5PeI2Vqk",
+      "role": "member",
+      "managerId": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
+      "jobTitle": "QA Tester",
+      "isActive": false,
+      "deactivatedAt": "2026-11-20T10:00:00.000Z",
+      "createdAt": "2026-11-22T14:57:48.125Z",
+      "updatedAt": "2026-11-22T15:09:28.119Z"
+    },
+    {
+      "id": "117c01fe-9ce7-41f2-a534-066869d5872a",
+      "companyId": "d868c22c-84fe-4afb-be8c-95d21f8c56eb",
+      "userId": "ikCy9MvmmzReDXhs9lp8Hpj24jOVvzHD",
+      "role": "member",
+      "managerId": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
+      "jobTitle": "Client QA Reviewer",
+      "isActive": false,
+      "deactivatedAt": "2026-11-21T10:00:00.000Z",
+      "createdAt": "2026-11-22T14:57:48.125Z",
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     }
   ],
   "teamMemberships": [
@@ -367,94 +367,94 @@
   ],
   "memberships": [
     {
-      "id": "12213065-e501-4619-8d32-cd089eeaf132",
-      "userId": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
+      "id": "dc448e5b-b034-411f-a8ca-9215041228e5",
+      "userId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "name": "James Thomas",
-      "email": "james.thomas@astu.test",
+      "email": "workspace.admin@gmail.com",
       "role": "admin",
       "managerId": null,
       "managerName": null,
       "managerEmail": null,
-      "jobTitle": "Chief Technology Officer / Administrator",
+      "jobTitle": "Administrator",
       "isActive": true,
       "deactivatedAt": null,
       "createdAt": "2026-11-22T14:57:48.125Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
-      "id": "dc448e5b-b034-411f-a8ca-9215041228e5",
-      "userId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "name": "Workspace Manager",
+      "id": "12213065-e501-4619-8d32-cd089eeaf132",
+      "userId": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
+      "name": "Daniel Matthew",
       "email": "workspace.manager@gmail.com",
       "role": "manager",
-      "managerId": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
+      "managerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "managerName": "James Thomas",
-      "managerEmail": "james.thomas@astu.test",
-      "jobTitle": "Engineering & Workspace Manager",
+      "managerEmail": "workspace.admin@gmail.com",
+      "jobTitle": "Workspace Manager",
       "isActive": true,
       "deactivatedAt": null,
       "createdAt": "2026-11-22T14:57:48.125Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "ae209062-16db-43fa-930a-12780954382a",
       "userId": "PBDrMS7J1jvUlgThXW6yUI4dxlKBhrDG",
-      "name": "David Chen",
-      "email": "lead.dev@astu.test",
+      "name": "Mark Steven",
+      "email": "workspace.member@gmail.com",
       "role": "member",
-      "managerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "managerName": "Workspace Manager",
+      "managerId": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
+      "managerName": "Daniel Matthew",
       "managerEmail": "workspace.manager@gmail.com",
-      "jobTitle": "Lead Software Engineer",
+      "jobTitle": "Team Member",
       "isActive": true,
       "deactivatedAt": null,
       "createdAt": "2026-11-22T14:57:48.125Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
-    },
-    {
-      "id": "117c01fe-9ce7-41f2-a534-066869d5872a",
-      "userId": "ikCy9MvmmzReDXhs9lp8Hpj24jOVvzHD",
-      "name": "Sarah Connor",
-      "email": "product.spec@astu.test",
-      "role": "member",
-      "managerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "managerName": "Workspace Manager",
-      "managerEmail": "workspace.manager@gmail.com",
-      "jobTitle": "Product Specialist",
-      "isActive": true,
-      "deactivatedAt": null,
-      "createdAt": "2026-11-22T14:57:48.125Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
-    },
-    {
-      "id": "3ff80bd6-c7a1-4edf-9ff8-b53c4c6108ec",
-      "userId": "NM2Ck261785WU5e1ED2RGY7V5PeI2Vqk",
-      "name": "Alex Rivera",
-      "email": "qa.lead@astu.test",
-      "role": "member",
-      "managerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "managerName": "Workspace Manager",
-      "managerEmail": "workspace.manager@gmail.com",
-      "jobTitle": "Quality Assurance Lead",
-      "isActive": true,
-      "deactivatedAt": null,
-      "createdAt": "2026-11-22T14:57:48.125Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "37e58a2b-721e-46dc-bfff-6877aaa7a808",
       "userId": "LuLrKoHOmER28W7TWc8dgQqOsDOXjQyT",
-      "name": "Elena Rostova",
-      "email": "ops.analyst@astu.test",
+      "name": "Abdi Test",
+      "email": "abdibaye0902@gmail.com",
       "role": "member",
       "managerId": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
-      "managerName": "James Thomas",
-      "managerEmail": "james.thomas@astu.test",
-      "jobTitle": "Operations Analyst",
+      "managerName": "Daniel Matthew",
+      "managerEmail": "workspace.manager@gmail.com",
+      "jobTitle": "Engineer",
       "isActive": true,
       "deactivatedAt": null,
       "createdAt": "2026-11-22T14:57:48.125Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
+    },
+    {
+      "id": "3ff80bd6-c7a1-4edf-9ff8-b53c4c6108ec",
+      "userId": "NM2Ck261785WU5e1ED2RGY7V5PeI2Vqk",
+      "name": "QA scope invitee",
+      "email": "qa-okr-20261119@example.invalid",
+      "role": "member",
+      "managerId": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
+      "managerName": "Daniel Matthew",
+      "managerEmail": "workspace.manager@gmail.com",
+      "jobTitle": "QA Tester",
+      "isActive": false,
+      "deactivatedAt": "2026-11-20T10:00:00.000Z",
+      "createdAt": "2026-11-22T14:57:48.125Z",
+      "updatedAt": "2026-11-22T15:09:28.119Z"
+    },
+    {
+      "id": "117c01fe-9ce7-41f2-a534-066869d5872a",
+      "userId": "ikCy9MvmmzReDXhs9lp8Hpj24jOVvzHD",
+      "name": "Client QA controlled inbox",
+      "email": "sourabh+alineo-qa-20261121@neander.ai",
+      "role": "member",
+      "managerId": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
+      "managerName": "Daniel Matthew",
+      "managerEmail": "workspace.manager@gmail.com",
+      "jobTitle": "Client QA Reviewer",
+      "isActive": false,
+      "deactivatedAt": "2026-11-21T10:00:00.000Z",
+      "createdAt": "2026-11-22T14:57:48.125Z",
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     }
   ],
   "objectives": [
@@ -468,7 +468,7 @@
       "level": "company",
       "teamId": null,
       "ownerId": "ikCy9MvmmzReDXhs9lp8Hpj24jOVvzHD",
-      "dueDate": "2026-12-30T21:00:00.000Z",
+      "dueDate": "2026-12-29T21:00:00.000Z",
       "status": "active",
       "approvalStatus": "not_required",
       "approvedBy": null,
@@ -480,7 +480,7 @@
       "version": 9,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-21T03:35:27.807Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "29b5e0b8-ac98-4d32-9405-6bccb8f0565d",
@@ -492,7 +492,7 @@
       "level": "company",
       "teamId": null,
       "ownerId": "ikCy9MvmmzReDXhs9lp8Hpj24jOVvzHD",
-      "dueDate": "2026-12-30T21:00:00.000Z",
+      "dueDate": "2026-12-29T21:00:00.000Z",
       "status": "active",
       "approvalStatus": "not_required",
       "approvedBy": null,
@@ -504,7 +504,7 @@
       "version": 1,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-21T03:35:34.573Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "35f1dfa1-d784-4d62-b8a9-43bae1065d4a",
@@ -516,7 +516,7 @@
       "level": "company",
       "teamId": null,
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-12-30T21:00:00.000Z",
+      "dueDate": "2026-12-29T21:00:00.000Z",
       "status": "active",
       "approvalStatus": "not_required",
       "approvedBy": null,
@@ -528,7 +528,7 @@
       "version": 1,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-21T03:35:33.859Z",
-      "updatedAt": "2026-11-21T03:35:33.859Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "e45b9422-dacc-4fbe-9f10-a20c93787913",
@@ -540,7 +540,7 @@
       "level": "company",
       "teamId": null,
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-12-30T21:00:00.000Z",
+      "dueDate": "2026-12-29T21:00:00.000Z",
       "status": "active",
       "approvalStatus": "not_required",
       "approvedBy": null,
@@ -552,7 +552,7 @@
       "version": 5,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-22T01:18:33.345Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "3b636158-a3ab-4370-bf4b-45c6f7bbad6e",
@@ -564,7 +564,7 @@
       "level": "company",
       "teamId": null,
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-12-30T21:00:00.000Z",
+      "dueDate": "2026-12-29T21:00:00.000Z",
       "status": "active",
       "approvalStatus": "not_required",
       "approvedBy": null,
@@ -576,7 +576,7 @@
       "version": 5,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-22T01:18:42.322Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "38ee865c-135d-4196-9bdf-bba701b6ddbf",
@@ -588,7 +588,7 @@
       "level": "company",
       "teamId": null,
       "ownerId": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
-      "dueDate": "2026-12-30T21:00:00.000Z",
+      "dueDate": "2026-12-29T21:00:00.000Z",
       "status": "active",
       "approvalStatus": "not_required",
       "approvedBy": null,
@@ -600,7 +600,7 @@
       "version": 1,
       "createdBy": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
       "createdAt": "2026-11-20T18:55:17.814Z",
-      "updatedAt": "2026-11-20T18:55:17.814Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "6d8739b3-a089-47c5-a274-52b8c8712386",
@@ -612,7 +612,7 @@
       "level": "individual",
       "teamId": null,
       "ownerId": "PBDrMS7J1jvUlgThXW6yUI4dxlKBhrDG",
-      "dueDate": "2026-12-30T21:00:00.000Z",
+      "dueDate": "2026-12-29T21:00:00.000Z",
       "status": "active",
       "approvalStatus": "not_required",
       "approvedBy": null,
@@ -624,7 +624,7 @@
       "version": 2,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-20T18:12:09.243Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "94f28cdb-469c-4510-8277-a719be1786e3",
@@ -636,7 +636,7 @@
       "level": "company",
       "teamId": null,
       "ownerId": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
-      "dueDate": "2027-03-30T21:00:00.000Z",
+      "dueDate": "2027-03-29T21:00:00.000Z",
       "status": "active",
       "approvalStatus": "not_required",
       "approvedBy": null,
@@ -648,7 +648,7 @@
       "version": 2,
       "createdBy": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
       "createdAt": "2026-11-20T17:51:34.592Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "e138bd91-fead-4db5-8bd2-ffc253383753",
@@ -660,7 +660,7 @@
       "level": "company",
       "teamId": null,
       "ownerId": "PBDrMS7J1jvUlgThXW6yUI4dxlKBhrDG",
-      "dueDate": "2026-12-30T21:00:00.000Z",
+      "dueDate": "2026-12-29T21:00:00.000Z",
       "status": "active",
       "approvalStatus": "not_required",
       "approvedBy": null,
@@ -672,7 +672,7 @@
       "version": 8,
       "createdBy": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
       "createdAt": "2026-11-20T17:58:29.162Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "b2d3d967-1a95-4cb7-9c37-fe9a26949d5a",
@@ -684,7 +684,7 @@
       "level": "company",
       "teamId": null,
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-12-30T21:00:00.000Z",
+      "dueDate": "2026-12-29T21:00:00.000Z",
       "status": "active",
       "approvalStatus": "not_required",
       "approvedBy": null,
@@ -696,7 +696,7 @@
       "version": 2,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-19T12:50:05.920Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "6d823edd-e731-4b85-8ab3-44fc677a552d",
@@ -708,7 +708,7 @@
       "level": "team",
       "teamId": "23e61d3c-0b33-49bf-bd7b-786de849eccf",
       "ownerId": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
-      "dueDate": "2026-11-17T21:00:00.000Z",
+      "dueDate": "2026-11-16T21:00:00.000Z",
       "status": "active",
       "approvalStatus": "pending",
       "approvedBy": null,
@@ -720,7 +720,7 @@
       "version": 1,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-19T13:11:36.718Z",
-      "updatedAt": "2026-11-19T13:11:36.718Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "4a1a99ad-3887-4aa7-b687-b5c9c7f78507",
@@ -732,7 +732,7 @@
       "level": "company",
       "teamId": null,
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-12-30T21:00:00.000Z",
+      "dueDate": "2026-12-29T21:00:00.000Z",
       "status": "active",
       "approvalStatus": "not_required",
       "approvedBy": null,
@@ -744,7 +744,7 @@
       "version": 1,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-19T12:42:51.672Z",
-      "updatedAt": "2026-11-19T12:46:13.885Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "49c322ad-c912-4f66-819d-6c5587b8b494",
@@ -756,7 +756,7 @@
       "level": "individual",
       "teamId": null,
       "ownerId": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
-      "dueDate": "2026-11-17T21:00:00.000Z",
+      "dueDate": "2026-11-16T21:00:00.000Z",
       "status": "active",
       "approvalStatus": "approved",
       "approvedBy": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
@@ -768,7 +768,7 @@
       "version": 8,
       "createdBy": "PBDrMS7J1jvUlgThXW6yUI4dxlKBhrDG",
       "createdAt": "2026-11-19T13:11:26.835Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "cb53b810-347f-4f5a-899e-554c8e58eee8",
@@ -780,7 +780,7 @@
       "level": "individual",
       "teamId": null,
       "ownerId": "PBDrMS7J1jvUlgThXW6yUI4dxlKBhrDG",
-      "dueDate": "2026-11-20T21:00:00.000Z",
+      "dueDate": "2026-11-19T21:00:00.000Z",
       "status": "active",
       "approvalStatus": "approved",
       "approvedBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
@@ -792,7 +792,7 @@
       "version": 5,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-19T13:23:08.645Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "0763cf61-ad5f-4d86-bacd-93fb3a9c6611",
@@ -804,7 +804,7 @@
       "level": "individual",
       "teamId": null,
       "ownerId": "PBDrMS7J1jvUlgThXW6yUI4dxlKBhrDG",
-      "dueDate": "2026-11-29T21:00:00.000Z",
+      "dueDate": "2026-11-28T21:00:00.000Z",
       "status": "active",
       "approvalStatus": "pending",
       "approvedBy": null,
@@ -816,7 +816,7 @@
       "version": 1,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-19T13:21:04.802Z",
-      "updatedAt": "2026-11-19T13:21:04.802Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "66856d01-4752-4ffa-86dd-79e5742a62d2",
@@ -828,7 +828,7 @@
       "level": "individual",
       "teamId": null,
       "ownerId": "PBDrMS7J1jvUlgThXW6yUI4dxlKBhrDG",
-      "dueDate": "2026-11-29T21:00:00.000Z",
+      "dueDate": "2026-11-28T21:00:00.000Z",
       "status": "active",
       "approvalStatus": "approved",
       "approvedBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
@@ -840,7 +840,7 @@
       "version": 6,
       "createdBy": "NM2Ck261785WU5e1ED2RGY7V5PeI2Vqk",
       "createdAt": "2026-11-19T13:14:35.096Z",
-      "updatedAt": "2026-11-19T13:19:23.121Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "7861e63c-4494-4be6-82d8-8340011c5eac",
@@ -864,7 +864,7 @@
       "version": 3,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-19T12:48:19.428Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "1037d7e4-7ff8-412d-bc32-e0aa2e961070",
@@ -876,7 +876,7 @@
       "level": "individual",
       "teamId": null,
       "ownerId": "PBDrMS7J1jvUlgThXW6yUI4dxlKBhrDG",
-      "dueDate": "2026-12-30T21:00:00.000Z",
+      "dueDate": "2026-12-29T21:00:00.000Z",
       "status": "active",
       "approvalStatus": "not_required",
       "approvedBy": null,
@@ -888,7 +888,7 @@
       "version": 3,
       "createdBy": "PBDrMS7J1jvUlgThXW6yUI4dxlKBhrDG",
       "createdAt": "2026-11-19T12:44:20.533Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "e8ac3b46-6aa7-4f7b-bf2e-ea7fdfa5a298",
@@ -900,7 +900,7 @@
       "level": "company",
       "teamId": null,
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-11-29T21:00:00.000Z",
+      "dueDate": "2026-11-28T21:00:00.000Z",
       "status": "draft",
       "approvalStatus": "pending",
       "approvedBy": null,
@@ -912,7 +912,7 @@
       "version": 1,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-19T13:16:28.825Z",
-      "updatedAt": "2026-11-19T13:16:28.825Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "d7a76bb7-bb46-4158-97f6-3d708d462abd",
@@ -924,7 +924,7 @@
       "level": "company",
       "teamId": null,
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-11-29T21:00:00.000Z",
+      "dueDate": "2026-11-28T21:00:00.000Z",
       "status": "draft",
       "approvalStatus": "pending",
       "approvedBy": null,
@@ -936,7 +936,7 @@
       "version": 1,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-19T13:16:29.548Z",
-      "updatedAt": "2026-11-19T13:16:29.548Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "1c885de6-ad13-42cb-adc7-cd5d2c15db05",
@@ -948,7 +948,7 @@
       "level": "company",
       "teamId": null,
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-11-29T21:00:00.000Z",
+      "dueDate": "2026-11-28T21:00:00.000Z",
       "status": "draft",
       "approvalStatus": "pending",
       "approvedBy": null,
@@ -960,7 +960,7 @@
       "version": 1,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-19T13:16:30.273Z",
-      "updatedAt": "2026-11-19T13:16:30.273Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "0a36f677-3b01-484c-ba07-37f82988b2ff",
@@ -972,7 +972,7 @@
       "level": "company",
       "teamId": null,
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-11-29T21:00:00.000Z",
+      "dueDate": "2026-11-28T21:00:00.000Z",
       "status": "draft",
       "approvalStatus": "pending",
       "approvedBy": null,
@@ -984,7 +984,7 @@
       "version": 1,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-19T13:16:31.261Z",
-      "updatedAt": "2026-11-19T13:16:31.261Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "ce9aff68-b96b-4f4c-8b20-762a07b16209",
@@ -996,7 +996,7 @@
       "level": "company",
       "teamId": null,
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-11-29T21:00:00.000Z",
+      "dueDate": "2026-11-28T21:00:00.000Z",
       "status": "draft",
       "approvalStatus": "pending",
       "approvedBy": null,
@@ -1008,7 +1008,7 @@
       "version": 1,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-19T13:16:32.000Z",
-      "updatedAt": "2026-11-19T13:16:32.000Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "dd697f1d-17f8-492a-8bfa-e2f090ef748f",
@@ -1020,7 +1020,7 @@
       "level": "company",
       "teamId": null,
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-11-29T21:00:00.000Z",
+      "dueDate": "2026-11-28T21:00:00.000Z",
       "status": "draft",
       "approvalStatus": "pending",
       "approvedBy": null,
@@ -1032,7 +1032,7 @@
       "version": 1,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-19T13:16:32.957Z",
-      "updatedAt": "2026-11-19T13:16:32.957Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "c326ba6e-4f3e-41c5-9e90-2a449bf7286b",
@@ -1044,7 +1044,7 @@
       "level": "company",
       "teamId": null,
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-11-29T21:00:00.000Z",
+      "dueDate": "2026-11-28T21:00:00.000Z",
       "status": "draft",
       "approvalStatus": "pending",
       "approvedBy": null,
@@ -1056,7 +1056,7 @@
       "version": 1,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-19T13:16:33.698Z",
-      "updatedAt": "2026-11-19T13:16:33.698Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "b400a98d-ef93-4692-98db-8429d65151f3",
@@ -1068,7 +1068,7 @@
       "level": "company",
       "teamId": null,
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-11-29T21:00:00.000Z",
+      "dueDate": "2026-11-28T21:00:00.000Z",
       "status": "draft",
       "approvalStatus": "pending",
       "approvedBy": null,
@@ -1080,7 +1080,7 @@
       "version": 1,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-19T13:16:34.566Z",
-      "updatedAt": "2026-11-19T13:16:34.566Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "205847d0-fc8a-4e04-b606-14de31a2964a",
@@ -1092,7 +1092,7 @@
       "level": "company",
       "teamId": null,
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-11-29T21:00:00.000Z",
+      "dueDate": "2026-11-28T21:00:00.000Z",
       "status": "draft",
       "approvalStatus": "pending",
       "approvedBy": null,
@@ -1104,7 +1104,7 @@
       "version": 1,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-19T13:16:35.362Z",
-      "updatedAt": "2026-11-19T13:16:35.362Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "e1ee76cd-3c81-42fd-8509-8369a7d9db02",
@@ -1116,7 +1116,7 @@
       "level": "company",
       "teamId": null,
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-11-29T21:00:00.000Z",
+      "dueDate": "2026-11-28T21:00:00.000Z",
       "status": "draft",
       "approvalStatus": "pending",
       "approvedBy": null,
@@ -1128,7 +1128,7 @@
       "version": 1,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-19T13:16:36.117Z",
-      "updatedAt": "2026-11-19T13:16:36.117Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "210ecb25-ea20-40b2-aa49-e7597e00ed7a",
@@ -1140,7 +1140,7 @@
       "level": "company",
       "teamId": null,
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-11-29T21:00:00.000Z",
+      "dueDate": "2026-11-28T21:00:00.000Z",
       "status": "draft",
       "approvalStatus": "pending",
       "approvedBy": null,
@@ -1152,7 +1152,7 @@
       "version": 1,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-19T13:16:36.837Z",
-      "updatedAt": "2026-11-19T13:16:36.837Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "a13766ae-5a3e-482c-8d24-a1a44d23efc9",
@@ -1164,7 +1164,7 @@
       "level": "company",
       "teamId": null,
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-12-30T21:00:00.000Z",
+      "dueDate": "2026-12-29T21:00:00.000Z",
       "status": "active",
       "approvalStatus": "not_required",
       "approvedBy": null,
@@ -1176,7 +1176,7 @@
       "version": 5,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-19T12:42:44.513Z",
-      "updatedAt": "2026-11-19T12:46:10.448Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "307300d2-5fe9-41bc-83d4-37a53eedbb5e",
@@ -1188,7 +1188,7 @@
       "level": "company",
       "teamId": null,
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-12-30T21:00:00.000Z",
+      "dueDate": "2026-12-29T21:00:00.000Z",
       "status": "active",
       "approvalStatus": "not_required",
       "approvedBy": null,
@@ -1200,7 +1200,7 @@
       "version": 18,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-19T12:37:46.069Z",
-      "updatedAt": "2026-11-19T12:46:13.862Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "361bde5b-2729-4719-8726-da30bbdf0082",
@@ -1212,7 +1212,7 @@
       "level": "company",
       "teamId": null,
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-11-29T21:00:00.000Z",
+      "dueDate": "2026-11-28T21:00:00.000Z",
       "status": "active",
       "approvalStatus": "pending",
       "approvedBy": null,
@@ -1224,7 +1224,7 @@
       "version": 1,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-19T13:12:51.437Z",
-      "updatedAt": "2026-11-19T13:12:51.437Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "c4099eb1-4cd7-4a4e-9341-1952b0fb1368",
@@ -1236,7 +1236,7 @@
       "level": "company",
       "teamId": null,
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-11-29T21:00:00.000Z",
+      "dueDate": "2026-11-28T21:00:00.000Z",
       "status": "active",
       "approvalStatus": "pending",
       "approvedBy": null,
@@ -1248,7 +1248,7 @@
       "version": 1,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-19T13:16:11.042Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "8bc85148-b3fd-4ac0-b517-c99c37bfce9f",
@@ -1260,7 +1260,7 @@
       "level": "team",
       "teamId": "d1f3af68-24c9-40cb-a057-65a51c2d189c",
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-12-30T21:00:00.000Z",
+      "dueDate": "2026-12-29T21:00:00.000Z",
       "status": "active",
       "approvalStatus": "not_required",
       "approvedBy": null,
@@ -1272,7 +1272,7 @@
       "version": 9,
       "createdBy": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
       "createdAt": "2026-11-21T09:50:58.010Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "3daa4504-ee54-4627-90a2-e1e96c0cdac3",
@@ -1284,7 +1284,7 @@
       "level": "company",
       "teamId": "d1f3af68-24c9-40cb-a057-65a51c2d189c",
       "ownerId": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
-      "dueDate": "2026-12-30T21:00:00.000Z",
+      "dueDate": "2026-12-29T21:00:00.000Z",
       "status": "active",
       "approvalStatus": "not_required",
       "approvedBy": null,
@@ -1296,32 +1296,10 @@
       "version": 2,
       "createdBy": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
       "createdAt": "2026-11-20T18:55:37.540Z",
-      "updatedAt": "2026-11-22T14:57:48.125Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     }
   ],
   "keyResults": [
-    {
-      "id": "2d31cbb1-1e7a-48ab-8b43-c8e9d3c57a80",
-      "companyId": "d868c22c-84fe-4afb-be8c-95d21f8c56eb",
-      "objectiveId": "94f28cdb-469c-4510-8277-a719be1786e3",
-      "title": "Acquire 10 Partner Logos",
-      "metricType": "numeric",
-      "direction": "increasing",
-      "unit": "",
-      "baseline": "0.0000",
-      "target": "10.0000",
-      "current": "0.0000",
-      "progress": "0.00",
-      "ownerId": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
-      "dueDate": "2027-03-30T21:00:00.000Z",
-      "confidence": "on_track",
-      "lastCheckInAt": "2026-11-20T17:52:38.955Z",
-      "lastEffectiveDate": "2026-12-31T21:00:00.000Z",
-      "archivedAt": null,
-      "version": 1,
-      "createdAt": "2026-11-20T17:52:38.955Z",
-      "updatedAt": "2026-11-20T17:52:38.955Z"
-    },
     {
       "id": "798d6023-aa71-48d5-99d9-c535d3038b9b",
       "companyId": "d868c22c-84fe-4afb-be8c-95d21f8c56eb",
@@ -1335,14 +1313,36 @@
       "current": "4.0000",
       "progress": "40.00",
       "ownerId": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
-      "dueDate": "2026-12-30T21:00:00.000Z",
+      "dueDate": "2026-12-29T21:00:00.000Z",
       "confidence": "on_track",
       "lastCheckInAt": "2026-11-20T17:59:48.314Z",
-      "lastEffectiveDate": "2026-11-19T21:00:00.000Z",
+      "lastEffectiveDate": "2026-11-18T21:00:00.000Z",
       "archivedAt": null,
       "version": 2,
       "createdAt": "2026-11-20T17:59:06.193Z",
-      "updatedAt": "2026-11-21T09:46:45.821Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
+    },
+    {
+      "id": "2d31cbb1-1e7a-48ab-8b43-c8e9d3c57a80",
+      "companyId": "d868c22c-84fe-4afb-be8c-95d21f8c56eb",
+      "objectiveId": "94f28cdb-469c-4510-8277-a719be1786e3",
+      "title": "Acquire 10 Partner Logos",
+      "metricType": "numeric",
+      "direction": "increasing",
+      "unit": "",
+      "baseline": "0.0000",
+      "target": "10.0000",
+      "current": "0.0000",
+      "progress": "0.00",
+      "ownerId": "EbE0yEyRE1i3r7hkOBLxAlZGECRR4tL3",
+      "dueDate": "2027-03-29T21:00:00.000Z",
+      "confidence": "on_track",
+      "lastCheckInAt": "2026-11-20T17:52:38.955Z",
+      "lastEffectiveDate": "2026-12-30T21:00:00.000Z",
+      "archivedAt": null,
+      "version": 1,
+      "createdAt": "2026-11-20T17:52:38.955Z",
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "c894865e-6f2c-454a-8f5f-568abead19e7",
@@ -1357,14 +1357,14 @@
       "current": "28.0000",
       "progress": "80.00",
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-12-30T21:00:00.000Z",
+      "dueDate": "2026-12-29T21:00:00.000Z",
       "confidence": "on_track",
       "lastCheckInAt": "2026-11-22T01:18:34.906Z",
-      "lastEffectiveDate": "2026-11-21T21:00:00.000Z",
+      "lastEffectiveDate": "2026-11-20T21:00:00.000Z",
       "archivedAt": null,
       "version": 2,
       "createdAt": "2026-11-22T01:18:34.027Z",
-      "updatedAt": "2026-11-22T01:18:39.306Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "225c4de0-36b1-45e3-b8e5-d198f6f31aa1",
@@ -1379,14 +1379,14 @@
       "current": "25.0000",
       "progress": "25.00",
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-12-30T21:00:00.000Z",
+      "dueDate": "2026-12-29T21:00:00.000Z",
       "confidence": "on_track",
       "lastCheckInAt": "2026-11-22T01:18:43.812Z",
-      "lastEffectiveDate": "2026-11-21T21:00:00.000Z",
+      "lastEffectiveDate": "2026-11-20T21:00:00.000Z",
       "archivedAt": null,
       "version": 2,
       "createdAt": "2026-11-22T01:18:42.984Z",
-      "updatedAt": "2026-11-22T01:18:48.259Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "c9d77770-0ab8-40f5-bba1-fe89a7a11b23",
@@ -1401,14 +1401,14 @@
       "current": "28.0000",
       "progress": "80.00",
       "ownerId": "ikCy9MvmmzReDXhs9lp8Hpj24jOVvzHD",
-      "dueDate": "2026-12-30T21:00:00.000Z",
+      "dueDate": "2026-12-29T21:00:00.000Z",
       "confidence": "at_risk",
       "lastCheckInAt": "2026-11-21T03:38:57.340Z",
-      "lastEffectiveDate": "2026-11-20T21:00:00.000Z",
+      "lastEffectiveDate": "2026-11-19T21:00:00.000Z",
       "archivedAt": null,
       "version": 4,
       "createdAt": "2026-11-21T03:35:28.774Z",
-      "updatedAt": "2026-11-21T03:39:00.311Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "65162331-1418-420c-b94d-91587e18c61b",
@@ -1423,14 +1423,14 @@
       "current": "100.0000",
       "progress": "100.00",
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-12-30T21:00:00.000Z",
+      "dueDate": "2026-12-29T21:00:00.000Z",
       "confidence": "on_track",
       "lastCheckInAt": "2026-11-21T09:51:46.613Z",
-      "lastEffectiveDate": "2026-11-20T21:00:00.000Z",
+      "lastEffectiveDate": "2026-11-19T21:00:00.000Z",
       "archivedAt": null,
       "version": 1,
       "createdAt": "2026-11-21T09:51:46.613Z",
-      "updatedAt": "2026-11-21T10:18:03.043Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "03b35c40-989e-4883-a25a-222c21ec5d64",
@@ -1445,14 +1445,14 @@
       "current": "0.0000",
       "progress": "0.00",
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-12-30T21:00:00.000Z",
+      "dueDate": "2026-12-29T21:00:00.000Z",
       "confidence": "on_track",
       "lastCheckInAt": "2026-11-21T09:52:52.082Z",
-      "lastEffectiveDate": "2026-11-20T21:00:00.000Z",
+      "lastEffectiveDate": "2026-11-19T21:00:00.000Z",
       "archivedAt": null,
       "version": 1,
       "createdAt": "2026-11-21T09:52:52.082Z",
-      "updatedAt": "2026-11-21T10:18:03.043Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "d15d56ff-14fe-46ac-805a-33993c20c210",
@@ -1467,14 +1467,14 @@
       "current": "0.0000",
       "progress": "0.00",
       "ownerId": "PBDrMS7J1jvUlgThXW6yUI4dxlKBhrDG",
-      "dueDate": "2026-12-30T21:00:00.000Z",
+      "dueDate": "2026-12-29T21:00:00.000Z",
       "confidence": "on_track",
       "lastCheckInAt": "2026-11-20T18:51:03.879Z",
-      "lastEffectiveDate": "2026-11-19T21:00:00.000Z",
+      "lastEffectiveDate": "2026-11-18T21:00:00.000Z",
       "archivedAt": null,
       "version": 1,
       "createdAt": "2026-11-20T18:51:03.879Z",
-      "updatedAt": "2026-11-20T18:51:03.879Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "2a574782-7e1e-4ebb-a2ac-f5488c846b71",
@@ -1496,7 +1496,7 @@
       "archivedAt": null,
       "version": 1,
       "createdAt": "2026-11-19T12:50:05.920Z",
-      "updatedAt": "2026-11-19T12:50:05.920Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "b9167184-7e76-45d7-bb7f-ad19ad72a431",
@@ -1511,14 +1511,14 @@
       "current": "5.0000",
       "progress": "0.00",
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-12-30T21:00:00.000Z",
+      "dueDate": "2026-12-29T21:00:00.000Z",
       "confidence": "on_track",
       "lastCheckInAt": "2026-11-19T12:42:16.147Z",
-      "lastEffectiveDate": "2026-11-18T21:00:00.000Z",
+      "lastEffectiveDate": "2026-11-17T21:00:00.000Z",
       "archivedAt": "2026-11-19T12:46:13.908Z",
       "version": 1,
       "createdAt": "2026-11-19T12:42:16.147Z",
-      "updatedAt": "2026-11-19T12:46:13.908Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "b6b74263-2aba-4a82-a86b-214e58604b24",
@@ -1533,14 +1533,14 @@
       "current": "0.0000",
       "progress": "0.00",
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-12-30T21:00:00.000Z",
+      "dueDate": "2026-12-29T21:00:00.000Z",
       "confidence": "on_track",
       "lastCheckInAt": "2026-11-19T12:42:23.986Z",
-      "lastEffectiveDate": "2026-11-18T21:00:00.000Z",
+      "lastEffectiveDate": "2026-11-17T21:00:00.000Z",
       "archivedAt": "2026-11-19T12:46:13.908Z",
       "version": 1,
       "createdAt": "2026-11-19T12:42:23.986Z",
-      "updatedAt": "2026-11-19T12:46:13.908Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "0bd43618-cf0d-482d-bae6-7d9cd9080dae",
@@ -1555,14 +1555,14 @@
       "current": "1.0000",
       "progress": "100.00",
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-12-30T21:00:00.000Z",
+      "dueDate": "2026-12-29T21:00:00.000Z",
       "confidence": "on_track",
       "lastCheckInAt": "2026-11-19T12:42:25.692Z",
-      "lastEffectiveDate": "2026-11-18T21:00:00.000Z",
+      "lastEffectiveDate": "2026-11-17T21:00:00.000Z",
       "archivedAt": "2026-11-19T12:46:13.908Z",
       "version": 1,
       "createdAt": "2026-11-19T12:42:25.692Z",
-      "updatedAt": "2026-11-19T12:46:13.908Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "4c0d2538-91a5-42fd-b0c7-5e6622a31802",
@@ -1577,14 +1577,14 @@
       "current": "1250.0000",
       "progress": "25.00",
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-12-30T21:00:00.000Z",
+      "dueDate": "2026-12-29T21:00:00.000Z",
       "confidence": "on_track",
       "lastCheckInAt": "2026-11-19T12:42:22.290Z",
-      "lastEffectiveDate": "2026-11-18T21:00:00.000Z",
+      "lastEffectiveDate": "2026-11-17T21:00:00.000Z",
       "archivedAt": "2026-11-19T12:46:13.908Z",
       "version": 1,
       "createdAt": "2026-11-19T12:42:22.290Z",
-      "updatedAt": "2026-11-19T12:46:13.908Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "c1c63ec7-1ce8-4dfe-ab15-aa8abccab17f",
@@ -1599,14 +1599,14 @@
       "current": "10.0000",
       "progress": "10.00",
       "ownerId": "PBDrMS7J1jvUlgThXW6yUI4dxlKBhrDG",
-      "dueDate": "2026-11-20T21:00:00.000Z",
+      "dueDate": "2026-11-19T21:00:00.000Z",
       "confidence": "off_track",
       "lastCheckInAt": "2026-11-19T13:23:17.428Z",
-      "lastEffectiveDate": "2026-11-18T21:00:00.000Z",
+      "lastEffectiveDate": "2026-11-17T21:00:00.000Z",
       "archivedAt": null,
       "version": 3,
       "createdAt": "2026-11-19T13:23:11.684Z",
-      "updatedAt": "2026-11-19T13:23:17.669Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "59d608ec-07f2-405e-a881-4047a21f2407",
@@ -1621,14 +1621,14 @@
       "current": "60.0000",
       "progress": "80.00",
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-12-30T21:00:00.000Z",
+      "dueDate": "2026-12-29T21:00:00.000Z",
       "confidence": "at_risk",
       "lastCheckInAt": "2026-11-19T12:40:47.384Z",
-      "lastEffectiveDate": "2026-11-18T21:00:00.000Z",
+      "lastEffectiveDate": "2026-11-17T21:00:00.000Z",
       "archivedAt": "2026-11-19T12:46:13.908Z",
       "version": 2,
       "createdAt": "2026-11-19T12:39:15.951Z",
-      "updatedAt": "2026-11-19T12:46:13.908Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "dfc59246-ee06-45f9-969e-04a348f9727b",
@@ -1643,14 +1643,14 @@
       "current": "40.0000",
       "progress": "100.00",
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-12-30T21:00:00.000Z",
+      "dueDate": "2026-12-29T21:00:00.000Z",
       "confidence": "on_track",
       "lastCheckInAt": "2026-11-19T12:42:17.927Z",
-      "lastEffectiveDate": "2026-11-18T21:00:00.000Z",
+      "lastEffectiveDate": "2026-11-17T21:00:00.000Z",
       "archivedAt": "2026-11-19T12:46:13.908Z",
       "version": 1,
       "createdAt": "2026-11-19T12:42:17.927Z",
-      "updatedAt": "2026-11-19T12:46:13.908Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "55388f8a-1029-4c00-9414-e4ae8e4b8b47",
@@ -1665,14 +1665,14 @@
       "current": "4.0000",
       "progress": "40.00",
       "ownerId": "PBDrMS7J1jvUlgThXW6yUI4dxlKBhrDG",
-      "dueDate": "2026-11-29T21:00:00.000Z",
+      "dueDate": "2026-11-28T21:00:00.000Z",
       "confidence": "on_track",
       "lastCheckInAt": "2026-11-19T13:14:37.485Z",
-      "lastEffectiveDate": "2026-11-18T21:00:00.000Z",
+      "lastEffectiveDate": "2026-11-17T21:00:00.000Z",
       "archivedAt": "2026-11-19T13:19:23.077Z",
       "version": 2,
       "createdAt": "2026-11-19T13:14:36.590Z",
-      "updatedAt": "2026-11-19T13:19:23.077Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "e1af8e03-4570-405e-9196-35fa21bf54a2",
@@ -1690,11 +1690,11 @@
       "dueDate": null,
       "confidence": "on_track",
       "lastCheckInAt": "2026-11-19T12:48:19.578Z",
-      "lastEffectiveDate": "2026-12-31T21:00:00.000Z",
+      "lastEffectiveDate": "2026-12-30T21:00:00.000Z",
       "archivedAt": null,
       "version": 1,
       "createdAt": "2026-11-19T12:48:19.428Z",
-      "updatedAt": "2026-11-19T12:48:19.428Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "bd4dcb87-3e29-47d2-9220-5d9409dace45",
@@ -1709,14 +1709,14 @@
       "current": "50.0000",
       "progress": "50.00",
       "ownerId": "PBDrMS7J1jvUlgThXW6yUI4dxlKBhrDG",
-      "dueDate": "2026-12-30T21:00:00.000Z",
+      "dueDate": "2026-12-29T21:00:00.000Z",
       "confidence": "on_track",
       "lastCheckInAt": "2026-11-19T12:47:07.809Z",
-      "lastEffectiveDate": "2026-11-18T21:00:00.000Z",
+      "lastEffectiveDate": "2026-11-17T21:00:00.000Z",
       "archivedAt": null,
       "version": 2,
       "createdAt": "2026-11-19T12:44:57.540Z",
-      "updatedAt": "2026-11-19T12:47:08.032Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "cd5e1a7a-ee18-4cc6-8c8e-dc1eef249ee9",
@@ -1731,14 +1731,14 @@
       "current": "100.0000",
       "progress": "25.00",
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-12-30T21:00:00.000Z",
+      "dueDate": "2026-12-29T21:00:00.000Z",
       "confidence": "on_track",
       "lastCheckInAt": "2026-11-19T12:46:00.884Z",
-      "lastEffectiveDate": "2026-11-18T21:00:00.000Z",
+      "lastEffectiveDate": "2026-11-17T21:00:00.000Z",
       "archivedAt": "2026-11-19T12:46:13.908Z",
       "version": 7,
       "createdAt": "2026-11-19T12:42:14.334Z",
-      "updatedAt": "2026-11-19T12:46:13.908Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "aa9fc4d6-bfed-41a0-aaa6-2dcaf994990b",
@@ -1753,14 +1753,14 @@
       "current": "50.0000",
       "progress": "50.00",
       "ownerId": "sW1rlDEEYGtM72qJipqwjFPrJMOWN4wy",
-      "dueDate": "2026-12-30T21:00:00.000Z",
+      "dueDate": "2026-12-29T21:00:00.000Z",
       "confidence": "on_track",
       "lastCheckInAt": "2026-11-19T12:42:20.439Z",
-      "lastEffectiveDate": "2026-11-18T21:00:00.000Z",
+      "lastEffectiveDate": "2026-11-17T21:00:00.000Z",
       "archivedAt": "2026-11-19T12:46:13.908Z",
       "version": 1,
       "createdAt": "2026-11-19T12:42:20.439Z",
-      "updatedAt": "2026-11-19T12:46:13.908Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     },
     {
       "id": "1cf00699-ee5f-4518-a807-065a9b3d55b3",
@@ -1775,14 +1775,14 @@
       "current": "80.0000",
       "progress": "80.00",
       "ownerId": "PBDrMS7J1jvUlgThXW6yUI4dxlKBhrDG",
-      "dueDate": "2026-11-17T21:00:00.000Z",
+      "dueDate": "2026-11-16T21:00:00.000Z",
       "confidence": "at_risk",
       "lastCheckInAt": "2026-11-19T13:16:22.127Z",
-      "lastEffectiveDate": "2026-11-18T21:00:00.000Z",
+      "lastEffectiveDate": "2026-11-17T21:00:00.000Z",
       "archivedAt": null,
       "version": 5,
       "createdAt": "2026-11-19T13:11:35.803Z",
-      "updatedAt": "2026-11-19T13:23:54.765Z"
+      "updatedAt": "2026-11-22T15:09:28.119Z"
     }
   ],
   "checkIns": [
