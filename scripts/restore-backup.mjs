@@ -177,7 +177,7 @@ try {
     const userTempPassword = process.env.RECOVERY_PASSWORD || generateSecurePassword();
     const userPasswordHash = await hashPassword(userTempPassword);
 
-    // Ensure account record exists for credential logins
+    // Ensure account record exists for credential logins, and update password on repeat restore so credentials always work
     const existingAccount = await client.query(
       `SELECT id FROM account WHERE user_id = $1 AND provider_id = 'credential'`,
       [uid]
@@ -188,15 +188,30 @@ try {
          VALUES (gen_random_uuid()::text, $1, 'credential', $1, $2, NOW(), NOW())`,
         [uid, userPasswordHash]
       );
+    } else {
+      await client.query(
+        `UPDATE account
+         SET password = $1, updated_at = NOW()
+         WHERE user_id = $2 AND provider_id = 'credential'`,
+        [userPasswordHash, uid]
+      );
     }
 
     // Provision secure one-time password reset verification token (24-hour expiration)
+    // Better Auth resetPassword endpoint verifies: identifier = 'reset-password:' || token, and reads value as userId
     const resetToken = crypto.randomBytes(32).toString("hex");
     const tokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    // Clear prior reset tokens for this user to ensure clean state
+    await client.query(
+      `DELETE FROM verification WHERE value = $1 AND identifier LIKE 'reset-password:%'`,
+      [uid]
+    );
+
     await client.query(
       `INSERT INTO verification (id, identifier, value, expires_at, created_at, updated_at)
        VALUES (gen_random_uuid()::text, $1, $2, $3, NOW(), NOW())`,
-      [`password-reset:${email}`, resetToken, tokenExpiresAt]
+      [`reset-password:${resetToken}`, uid, tokenExpiresAt]
     );
 
     credentialsManifest.push({
@@ -205,8 +220,9 @@ try {
       email,
       temporaryPassword: userTempPassword,
       resetToken,
+      resetUrl: `/reset-password?token=${resetToken}`,
       tokenExpiresAt: tokenExpiresAt.toISOString(),
-      existingAccount: existingAccount.rowCount > 0,
+      accountUpdated: existingAccount.rowCount > 0,
     });
 
     usersRestored++;
@@ -781,7 +797,9 @@ try {
   // Save generated secure credentials manifest to a protected local file
   const credsDir = path.resolve("docs/recovery");
   if (!fs.existsSync(credsDir)) {
-    fs.mkdirSync(credsDir, { recursive: true });
+    fs.mkdirSync(credsDir, { recursive: true, mode: 0o700 });
+  } else {
+    try { fs.chmodSync(credsDir, 0o700); } catch {}
   }
   const credsPath = path.join(credsDir, "recovery-credentials.json");
   fs.writeFileSync(
@@ -796,6 +814,7 @@ try {
           email: c.email,
           temporaryPassword: c.temporaryPassword,
           resetToken: c.resetToken,
+          resetUrl: c.resetUrl,
           tokenExpiresAt: c.tokenExpiresAt,
         })),
       },
@@ -804,6 +823,9 @@ try {
     ),
     { mode: 0o600 }
   );
+
+  // Explicitly enforce 0600 permissions even when overwriting an existing file
+  fs.chmodSync(credsPath, 0o600);
 
   console.log(`\n=======================================================`);
   console.log(` RESTORE COMPLETED SUCCESSFULLY!`);

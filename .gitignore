@@ -10,3 +10,5 @@
 **/*.tsbuildinfo
 config.bat
 docs/recovery/recovery-credentials.json
+alineo-recovery-deliverables.zip
+README-DELIVERABLES.txt

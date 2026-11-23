@@ -1,0 +1,238 @@
+{
+  "source_repository": "https://github.com/Abdibaye/okr_platform",
+  "source_commit": "a9236da2b6206973465a148b9f4c4305c8383f1e",
+  "runtime": "Node 24.22.3; PostgreSQL 17; committed Drizzle migrations; isolated local Docker network",
+  "checks": [
+    {
+      "name": "Failed submitted restore rolled back all imported rows",
+      "passed": true,
+      "details": {
+        "users": 0,
+        "companyMemberships": 0,
+        "teamMemberships": 0,
+        "teams": 0,
+        "cycles": 0,
+        "objectives": 0,
+        "keyResults": 0,
+        "checkIns": 0,
+        "comments": 0,
+        "auditLogs": 0
+      }
+    },
+    {
+      "name": "users IDs and counts retained",
+      "passed": true,
+      "details": {
+        "expected": 6,
+        "actual": 6
+      }
+    },
+    {
+      "name": "companyMemberships IDs and counts retained",
+      "passed": true,
+      "details": {
+        "expected": 6,
+        "actual": 6
+      }
+    },
+    {
+      "name": "teamMemberships IDs and counts retained",
+      "passed": true,
+      "details": {
+        "expected": 3,
+        "actual": 3
+      }
+    },
+    {
+      "name": "teams IDs and counts retained",
+      "passed": true,
+      "details": {
+        "expected": 3,
+        "actual": 3
+      }
+    },
+    {
+      "name": "cycles IDs and counts retained",
+      "passed": true,
+      "details": {
+        "expected": 6,
+        "actual": 6
+      }
+    },
+    {
+      "name": "objectives IDs and counts retained",
+      "passed": true,
+      "details": {
+        "expected": 35,
+        "actual": 35
+      }
+    },
+    {
+      "name": "keyResults IDs and counts retained",
+      "passed": true,
+      "details": {
+        "expected": 22,
+        "actual": 22
+      }
+    },
+    {
+      "name": "checkIns IDs and counts retained",
+      "passed": true,
+      "details": {
+        "expected": 38,
+        "actual": 38
+      }
+    },
+    {
+      "name": "comments IDs and counts retained",
+      "passed": true,
+      "details": {
+        "expected": 6,
+        "actual": 6
+      }
+    },
+    {
+      "name": "auditLogs IDs and counts retained",
+      "passed": true,
+      "details": {
+        "expected": 167,
+        "actual": 167
+      }
+    },
+    {
+      "name": "Exported business values retained excluding regenerated timestamps",
+      "passed": false,
+      "details": null
+    },
+    {
+      "name": "At least one active Admin restored",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "Deactivated staff preserved",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "admin recovery sign-in",
+      "passed": true,
+      "details": {
+        "status": 200
+      }
+    },
+    {
+      "name": "admin workspace access",
+      "passed": true,
+      "details": {
+        "status": 200
+      }
+    },
+    {
+      "name": "admin backup export permissions",
+      "passed": true,
+      "details": {
+        "status": 200
+      }
+    },
+    {
+      "name": "Restored reports readable",
+      "passed": true,
+      "details": {
+        "status": 200
+      }
+    },
+    {
+      "name": "manager recovery sign-in",
+      "passed": true,
+      "details": {
+        "status": 200
+      }
+    },
+    {
+      "name": "manager workspace access",
+      "passed": true,
+      "details": {
+        "status": 200
+      }
+    },
+    {
+      "name": "manager backup export permissions",
+      "passed": true,
+      "details": {
+        "status": 403
+      }
+    },
+    {
+      "name": "member recovery sign-in",
+      "passed": true,
+      "details": {
+        "status": 200
+      }
+    },
+    {
+      "name": "member workspace access",
+      "passed": true,
+      "details": {
+        "status": 200
+      }
+    },
+    {
+      "name": "member backup export permissions",
+      "passed": true,
+      "details": {
+        "status": 403
+      }
+    },
+    {
+      "name": "deactivated recovery sign-in",
+      "passed": true,
+      "details": {
+        "status": 200
+      }
+    },
+    {
+      "name": "deactivated workspace access",
+      "passed": true,
+      "details": {
+        "status": 403
+      }
+    },
+    {
+      "name": "deactivated backup export permissions",
+      "passed": true,
+      "details": {
+        "status": 403
+      }
+    }
+  ],
+  "field_differences": [
+    {
+      "collection": "companyMemberships",
+      "field": "createdAt",
+      "count": 6
+    },
+    {
+      "collection": "companyMemberships",
+      "field": "updatedAt",
+      "count": 6
+    },
+    {
+      "collection": "objectives",
+      "field": "progress",
+      "count": 22
+    },
+    {
+      "collection": "objectives",
+      "field": "updatedAt",
+      "count": 15
+    }
+  ],
+  "production_database_accessed": false,
+  "production_workspace_mutated": false,
+  "limitations": [
+    "Source checkout tested; exact deployed-commit parity not independently verified.",
+    "Published export captured 2026-11-23T01:51:16.855Z, not a new current full database dump.",
+    "Targeted API checks, not complete permissions or UI verification."
+  ]
+}

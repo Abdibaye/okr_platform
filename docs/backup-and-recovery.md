@@ -101,9 +101,9 @@ When restoring from a JSON backup, entity order discrepancies can trigger Postgr
    - **Secure Credentials Process**:
      - Eliminates shared static passwords.
      - For each restored user, generates a unique, cryptographically random high-entropy temporary password (or adopts `RECOVERY_PASSWORD` if provided).
-     - Inserts the scrypt-hashed password into the `account` table.
-     - Provisions a secure one-time password reset token (24-hour expiration) into the `verification` table (`identifier = 'password-reset:<email>'`).
-     - Outputs the credentials manifest securely to `docs/recovery/recovery-credentials.json` with restricted OS file permissions (`0600`, read/write only by the process owner).
+     - Inserts or updates the scrypt-hashed password in the `account` table, ensuring that repeated restores synchronize credentials so listed passwords always work for both new and existing accounts.
+     - Provisions a secure one-time password reset verification token (24-hour expiration) into the `verification` table matching Better Auth's application contract (`identifier = 'reset-password:<token>'`, `value = '<userId>'`), along with direct reset URLs (`/reset-password?token=<token>`).
+     - Outputs the credentials manifest securely to `docs/recovery/recovery-credentials.json` with strictly enforced OS file permissions (`0600`, read/write only by the process owner, enforced even when overwriting an existing file).
 3. **Pass 1 — Roles & Membership Enrollment (Hierarchy-Safe)**:
    - Restores `company_memberships` with the user's exact `role` (`admin`, `manager`, `member`), `jobTitle`, active status, and original `createdAt`/`updatedAt` timestamps.
    - **Sets `manager_id: null` in Pass 1**. This guarantees no foreign key errors can occur, regardless of user ingestion sequence.
