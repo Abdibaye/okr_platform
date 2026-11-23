@@ -9,3 +9,4 @@
 **/.pytest_cache
 **/*.tsbuildinfo
 config.bat
+docs/recovery/recovery-credentials.json

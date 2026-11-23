@@ -7,8 +7,12 @@ import {
   companies,
   companyMemberships,
   goalComments,
+  invitations,
+  keyResultEditors,
   keyResults,
   krCheckIns,
+  notifications,
+  objectiveAccess,
   objectives,
   okrCycles,
   teamMemberships,
@@ -35,6 +39,10 @@ export async function GET() {
     checkIns,
     comments,
     audit,
+    objectiveAccessRows,
+    keyResultEditorRows,
+    invitationRows,
+    notificationRows,
   ] = await Promise.all([
     database.select().from(companies).where(eq(companies.id, context.companyId)).limit(1).then((r) => r[0] ?? null),
     database.select().from(okrCycles).where(eq(okrCycles.companyId, context.companyId)),
@@ -62,6 +70,10 @@ export async function GET() {
     database.select().from(krCheckIns).where(eq(krCheckIns.companyId, context.companyId)),
     database.select().from(goalComments).where(eq(goalComments.companyId, context.companyId)),
     database.select().from(auditLogs).where(eq(auditLogs.companyId, context.companyId)),
+    database.select().from(objectiveAccess).where(eq(objectiveAccess.companyId, context.companyId)),
+    database.select().from(keyResultEditors).where(eq(keyResultEditors.companyId, context.companyId)),
+    database.select().from(invitations).where(eq(invitations.companyId, context.companyId)),
+    database.select().from(notifications).where(eq(notifications.companyId, context.companyId)),
   ]);
 
   const emailByUserId = new Map(companyMembershipRows.map((m) => [m.userId, m.email]));
@@ -106,5 +118,9 @@ export async function GET() {
     checkIns,
     comments,
     auditLogs: audit,
+    objectiveAccess: objectiveAccessRows,
+    keyResultEditors: keyResultEditorRows,
+    invitations: invitationRows,
+    notifications: notificationRows,
   }, { headers: { "Cache-Control": "no-store" } });
 }

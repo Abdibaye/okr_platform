@@ -42,7 +42,18 @@ const client = new Client({
 
 await client.connect();
 
-const defaultPasswordHash = await hashPassword("RecoveryPass123!");
+// Helper to generate a high-entropy temporary password
+function generateSecurePassword() {
+  const chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789!@#$%^&*";
+  const bytes = crypto.randomBytes(16);
+  let pass = "";
+  for (let i = 0; i < 16; i++) {
+    pass += chars[bytes[i] % chars.length];
+  }
+  return pass + "Aa1!";
+}
+
+const credentialsManifest = [];
 
 try {
   await client.query("BEGIN");
@@ -107,6 +118,17 @@ try {
   for (const ci of backup.checkIns || []) addUserId(ci.authorId);
   for (const cm of backup.comments || []) addUserId(cm.authorId);
   for (const al of backup.auditLogs || []) addUserId(al.actorId);
+  for (const oa of backup.objectiveAccess || []) addUserId(oa.userId);
+  for (const kre of backup.keyResultEditors || []) addUserId(kre.userId);
+  for (const inv of backup.invitations || []) {
+    addUserId(inv.invitedBy);
+    addUserId(inv.acceptedBy);
+    addUserId(inv.managerId);
+  }
+  for (const notif of backup.notifications || []) {
+    addUserId(notif.recipientId);
+    addUserId(notif.actorId);
+  }
 
   // 2. Restore Users & Auth Credentials (Ensuring every referenced user exists)
   let usersRestored = 0;
@@ -151,7 +173,11 @@ try {
       [uid, name || "Staff User", email, image]
     );
 
-    // Ensure account record exists for password logins
+    // Determine temporary password & credential provisioning
+    const userTempPassword = process.env.RECOVERY_PASSWORD || generateSecurePassword();
+    const userPasswordHash = await hashPassword(userTempPassword);
+
+    // Ensure account record exists for credential logins
     const existingAccount = await client.query(
       `SELECT id FROM account WHERE user_id = $1 AND provider_id = 'credential'`,
       [uid]
@@ -160,12 +186,32 @@ try {
       await client.query(
         `INSERT INTO account (id, account_id, provider_id, user_id, password, created_at, updated_at)
          VALUES (gen_random_uuid()::text, $1, 'credential', $1, $2, NOW(), NOW())`,
-        [uid, defaultPasswordHash]
+        [uid, userPasswordHash]
       );
     }
+
+    // Provision secure one-time password reset verification token (24-hour expiration)
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const tokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await client.query(
+      `INSERT INTO verification (id, identifier, value, expires_at, created_at, updated_at)
+       VALUES (gen_random_uuid()::text, $1, $2, $3, NOW(), NOW())`,
+      [`password-reset:${email}`, resetToken, tokenExpiresAt]
+    );
+
+    credentialsManifest.push({
+      userId: uid,
+      name: name || "Staff User",
+      email,
+      temporaryPassword: userTempPassword,
+      resetToken,
+      tokenExpiresAt: tokenExpiresAt.toISOString(),
+      existingAccount: existingAccount.rowCount > 0,
+    });
+
     usersRestored++;
   }
-  console.log(`✓ Restored ${usersRestored} User identities & auth credentials`);
+  console.log(`✓ Restored ${usersRestored} User identities & auth credentials (secure credentials generated)`);
 
   // Consolidate Company Memberships
   const membershipMap = new Map();
@@ -180,6 +226,8 @@ try {
         jobTitle: m.jobTitle || "",
         isActive: m.isActive !== undefined ? m.isActive : true,
         deactivatedAt: m.deactivatedAt || null,
+        createdAt: m.createdAt || null,
+        updatedAt: m.updatedAt || null,
       });
     }
   }
@@ -196,6 +244,8 @@ try {
         jobTitle: s.jobTitle || existing.jobTitle || "",
         isActive: s.isActive !== undefined ? s.isActive : (existing.isActive !== undefined ? existing.isActive : true),
         deactivatedAt: s.deactivatedAt || existing.deactivatedAt || null,
+        createdAt: s.createdAt || existing.createdAt || null,
+        updatedAt: s.updatedAt || existing.updatedAt || null,
       });
     }
   }
@@ -214,6 +264,8 @@ try {
           jobTitle: "",
           isActive: true,
           deactivatedAt: null,
+          createdAt: null,
+          updatedAt: null,
         });
         if (!hasAdmin) hasAdmin = true;
       }
@@ -229,15 +281,16 @@ try {
          id, company_id, user_id, role, manager_id, job_title, is_active, deactivated_at, created_at, updated_at
        )
        VALUES (
-         COALESCE($1::uuid, gen_random_uuid()), $2, $3, $4, NULL, $5, $6, $7, NOW(), NOW()
+         COALESCE($1::uuid, gen_random_uuid()), $2, $3, $4, NULL, $5, $6, $7,
+         COALESCE($8::timestamptz, NOW()), COALESCE($9::timestamptz, NOW())
        )
        ON CONFLICT (company_id, user_id) DO UPDATE SET
          role = EXCLUDED.role,
          job_title = EXCLUDED.job_title,
          is_active = EXCLUDED.is_active,
          deactivated_at = EXCLUDED.deactivated_at,
-         updated_at = NOW()`,
-      [m.id, m.companyId, m.userId, m.role, m.jobTitle, m.isActive, m.deactivatedAt]
+         updated_at = COALESCE(EXCLUDED.updated_at, company_memberships.updated_at)`,
+      [m.id, m.companyId, m.userId, m.role, m.jobTitle, m.isActive, m.deactivatedAt, m.createdAt, m.updatedAt]
     );
     membershipsRestored++;
   }
@@ -251,9 +304,9 @@ try {
       if (mgrExists.rowCount > 0 && m.managerId !== m.userId) {
         await client.query(
           `UPDATE company_memberships
-           SET manager_id = $1, updated_at = NOW()
-           WHERE company_id = $2 AND user_id = $3`,
-          [m.managerId, m.companyId, m.userId]
+           SET manager_id = $1, updated_at = COALESCE($2::timestamptz, updated_at)
+           WHERE company_id = $3 AND user_id = $4`,
+          [m.managerId, m.updatedAt || null, m.companyId, m.userId]
         );
         managerLinesLinked++;
       } else {
@@ -284,7 +337,7 @@ try {
          description = EXCLUDED.description,
          lead_user_id = EXCLUDED.lead_user_id,
          archived_at = EXCLUDED.archived_at,
-         updated_at = NOW()`,
+         updated_at = COALESCE(EXCLUDED.updated_at, teams.updated_at)`,
       [t.id, t.companyId, t.name, t.description || "", leadId, t.archivedAt || null, t.createdAt || null, t.updatedAt || null]
     );
     teamsRestored++;
@@ -296,7 +349,6 @@ try {
   for (const tm of rawTeamMemberships) {
     if (!tm.teamId || !tm.userId || !tm.companyId) continue;
 
-    // Verify team and user exist
     const teamExists = await client.query(`SELECT id FROM teams WHERE id = $1`, [tm.teamId]);
     const userExists = await client.query(`SELECT id FROM "user" WHERE id = $1`, [tm.userId]);
     if (teamExists.rowCount === 0 || userExists.rowCount === 0) continue;
@@ -333,7 +385,7 @@ try {
          check_in_cadence = EXCLUDED.check_in_cadence,
          archived_at = EXCLUDED.archived_at,
          version = EXCLUDED.version,
-         updated_at = NOW()`,
+         updated_at = COALESCE(EXCLUDED.updated_at, okr_cycles.updated_at)`,
       [
         c.id, c.companyId, c.name, c.startDate, c.endDate, c.status || "open",
         c.finalReflection || "", c.requireApproval || false, c.checkInCadence || "weekly",
@@ -344,7 +396,7 @@ try {
   }
   console.log(`✓ Restored ${cyclesRestored} OKR Planning Cycles`);
 
-  // 8. Restore Objectives (Pass 1: base objectives; Pass 2: parent alignment)
+  // 8. Restore Objectives (Pass 1: base objectives; Pass 2: parent alignment & copied goals)
   const objectives = backup.objectives || [];
   let objectivesRestored = 0;
   for (const obj of objectives) {
@@ -362,6 +414,11 @@ try {
       if (exists.rowCount === 0) teamId = null;
     }
 
+    // Preserve exact progress value: keep null as null, do not coerce to "0"
+    const progressVal = (obj.progress !== null && obj.progress !== undefined) ? obj.progress : null;
+
+    // Both parent_objective_id and copied_from_objective_id are set to NULL in Pass 1
+    // to prevent foreign key violations regardless of objective ordering in the JSON payload.
     await client.query(
       `INSERT INTO objectives (
          id, company_id, cycle_id, title, description, progress, level, team_id,
@@ -372,8 +429,8 @@ try {
        VALUES (
          $1, $2, $3, $4, $5, $6, $7, $8,
          $9, $10, $11, $12, $13, $14,
-         $15, NULL, $16, $17,
-         $18, $19, COALESCE($20::timestamptz, NOW()), COALESCE($21::timestamptz, NOW())
+         $15, NULL, NULL, $16,
+         $17, $18, COALESCE($19::timestamptz, NOW()), COALESCE($20::timestamptz, NOW())
        )
        ON CONFLICT (id) DO UPDATE SET
          title = EXCLUDED.title,
@@ -385,16 +442,18 @@ try {
          due_date = EXCLUDED.due_date,
          status = EXCLUDED.status,
          approval_status = EXCLUDED.approval_status,
+         approved_by = EXCLUDED.approved_by,
+         approved_at = EXCLUDED.approved_at,
          visibility = EXCLUDED.visibility,
          archived_at = EXCLUDED.archived_at,
          version = EXCLUDED.version,
-         updated_at = NOW()`,
+         updated_at = COALESCE(EXCLUDED.updated_at, objectives.updated_at)`,
       [
         obj.id, obj.companyId, obj.cycleId, obj.title, obj.description || "",
-        obj.progress || "0", obj.level || "company", teamId,
+        progressVal, obj.level || "company", teamId,
         ownerId, obj.dueDate || null, obj.status || "active",
         obj.approvalStatus || "approved", obj.approvedBy || null, obj.approvedAt || null,
-        obj.visibility || "company", obj.copiedFromObjectiveId || null,
+        obj.visibility || "company",
         obj.archivedAt || null, obj.version || 1, obj.createdBy,
         obj.createdAt || null, obj.updatedAt || null
       ]
@@ -402,31 +461,69 @@ try {
     objectivesRestored++;
   }
 
-  // Pass 2: Parent objective linking
+  // Pass 2: Parent objective linking & Copied objective references
   let parentAlignmentsLinked = 0;
+  let copiedGoalsLinked = 0;
   for (const obj of objectives) {
-    if (obj.parentObjectiveId) {
+    let parentId = null;
+    if (obj.parentObjectiveId && obj.parentObjectiveId !== obj.id) {
       const parentExists = await client.query(`SELECT id FROM objectives WHERE id = $1`, [obj.parentObjectiveId]);
-      if (parentExists.rowCount > 0 && obj.parentObjectiveId !== obj.id) {
-        await client.query(
-          `UPDATE objectives
-           SET parent_objective_id = $1, updated_at = NOW()
-           WHERE id = $2`,
-          [obj.parentObjectiveId, obj.id]
-        );
+      if (parentExists.rowCount > 0) {
+        parentId = obj.parentObjectiveId;
         parentAlignmentsLinked++;
       }
     }
-  }
-  console.log(`✓ Restored ${objectivesRestored} Objectives (${parentAlignmentsLinked} parent alignments linked)`);
 
-  // 9. Restore Key Results
+    let copiedFromId = null;
+    if (obj.copiedFromObjectiveId && obj.copiedFromObjectiveId !== obj.id) {
+      const copiedExists = await client.query(`SELECT id FROM objectives WHERE id = $1`, [obj.copiedFromObjectiveId]);
+      if (copiedExists.rowCount > 0) {
+        copiedFromId = obj.copiedFromObjectiveId;
+        copiedGoalsLinked++;
+      }
+    }
+
+    if (parentId !== null || copiedFromId !== null) {
+      await client.query(
+        `UPDATE objectives
+         SET
+           parent_objective_id = COALESCE($1::uuid, parent_objective_id),
+           copied_from_objective_id = COALESCE($2::uuid, copied_from_objective_id),
+           updated_at = COALESCE($3::timestamptz, updated_at)
+         WHERE id = $4`,
+        [parentId, copiedFromId, obj.updatedAt || null, obj.id]
+      );
+    }
+  }
+  console.log(`✓ Restored ${objectivesRestored} Objectives (${parentAlignmentsLinked} parent alignments, ${copiedGoalsLinked} copied references linked)`);
+
+  // 9. Restore Objective Access Permissions
+  const objectiveAccess = backup.objectiveAccess || [];
+  let objectiveAccessRestored = 0;
+  for (const oa of objectiveAccess) {
+    if (!oa.companyId || !oa.objectiveId || !oa.userId) continue;
+
+    const objExists = await client.query(`SELECT id FROM objectives WHERE id = $1`, [oa.objectiveId]);
+    const userExists = await client.query(`SELECT id FROM "user" WHERE id = $1`, [oa.userId]);
+    if (objExists.rowCount === 0 || userExists.rowCount === 0) continue;
+
+    await client.query(
+      `INSERT INTO objective_access (id, company_id, objective_id, user_id, permission)
+       VALUES (COALESCE($1::uuid, gen_random_uuid()), $2, $3, $4, $5)
+       ON CONFLICT (objective_id, user_id) DO UPDATE SET
+         permission = EXCLUDED.permission`,
+      [oa.id || null, oa.companyId, oa.objectiveId, oa.userId, oa.permission || "viewer"]
+    );
+    objectiveAccessRestored++;
+  }
+  console.log(`✓ Restored ${objectiveAccessRestored} Goal Permissions (objective_access)`);
+
+  // 10. Restore Key Results
   const keyResults = backup.keyResults || [];
   let keyResultsRestored = 0;
   for (const kr of keyResults) {
     if (!kr.id || !kr.companyId || !kr.objectiveId || !kr.title) continue;
 
-    // Verify parent objective exists
     const objExists = await client.query(`SELECT id FROM objectives WHERE id = $1`, [kr.objectiveId]);
     if (objExists.rowCount === 0) continue;
 
@@ -435,6 +532,8 @@ try {
       const exists = await client.query(`SELECT id FROM "user" WHERE id = $1`, [ownerId]);
       if (exists.rowCount === 0) ownerId = null;
     }
+
+    const krProgressVal = (kr.progress !== null && kr.progress !== undefined) ? kr.progress : "0";
 
     await client.query(
       `INSERT INTO key_results (
@@ -463,11 +562,11 @@ try {
          last_effective_date = EXCLUDED.last_effective_date,
          archived_at = EXCLUDED.archived_at,
          version = EXCLUDED.version,
-         updated_at = NOW()`,
+         updated_at = COALESCE(EXCLUDED.updated_at, key_results.updated_at)`,
       [
         kr.id, kr.companyId, kr.objectiveId, kr.title, kr.metricType || "numeric",
         kr.direction || "increasing", kr.unit || "", kr.baseline || "0", kr.target || "100",
-        kr.current || "0", kr.progress || "0", ownerId, kr.dueDate || null,
+        kr.current || "0", krProgressVal, ownerId, kr.dueDate || null,
         kr.confidence || "on_track", kr.lastCheckInAt || null, kr.lastEffectiveDate || null,
         kr.archivedAt || null, kr.version || 1, kr.createdAt || null, kr.updatedAt || null
       ]
@@ -476,7 +575,27 @@ try {
   }
   console.log(`✓ Restored ${keyResultsRestored} Key Results`);
 
-  // 10. Restore KR Check-Ins
+  // 11. Restore Key Result Editors
+  const keyResultEditors = backup.keyResultEditors || [];
+  let keyResultEditorsRestored = 0;
+  for (const kre of keyResultEditors) {
+    if (!kre.companyId || !kre.keyResultId || !kre.userId) continue;
+
+    const krExists = await client.query(`SELECT id FROM key_results WHERE id = $1`, [kre.keyResultId]);
+    const userExists = await client.query(`SELECT id FROM "user" WHERE id = $1`, [kre.userId]);
+    if (krExists.rowCount === 0 || userExists.rowCount === 0) continue;
+
+    await client.query(
+      `INSERT INTO key_result_editors (id, company_id, key_result_id, user_id)
+       VALUES (COALESCE($1::uuid, gen_random_uuid()), $2, $3, $4)
+       ON CONFLICT (key_result_id, user_id) DO NOTHING`,
+      [kre.id || null, kre.companyId, kre.keyResultId, kre.userId]
+    );
+    keyResultEditorsRestored++;
+  }
+  console.log(`✓ Restored ${keyResultEditorsRestored} Goal Editors (key_result_editors)`);
+
+  // 12. Restore KR Check-Ins
   const checkIns = backup.checkIns || [];
   let checkInsRestored = 0;
   for (const ci of checkIns) {
@@ -512,7 +631,7 @@ try {
   }
   console.log(`✓ Restored ${checkInsRestored} KR Check-in History records`);
 
-  // 11. Restore Comments
+  // 13. Restore Comments
   const comments = backup.comments || [];
   let commentsRestored = 0;
   for (const cm of comments) {
@@ -538,7 +657,102 @@ try {
   }
   console.log(`✓ Restored ${commentsRestored} Goal Comments`);
 
-  // 12. Restore Audit Logs
+  // 14. Restore Invitations
+  const invitations = backup.invitations || [];
+  let invitationsRestored = 0;
+  for (const inv of invitations) {
+    if (!inv.id || !inv.companyId || !inv.email || !inv.token) continue;
+
+    let teamId = inv.teamId || null;
+    if (teamId) {
+      const teamExists = await client.query(`SELECT id FROM teams WHERE id = $1`, [teamId]);
+      if (teamExists.rowCount === 0) teamId = null;
+    }
+
+    let managerId = inv.managerId || null;
+    if (managerId) {
+      const mgrExists = await client.query(`SELECT id FROM "user" WHERE id = $1`, [managerId]);
+      if (mgrExists.rowCount === 0) managerId = null;
+    }
+
+    let acceptedBy = inv.acceptedBy || null;
+    if (acceptedBy) {
+      const userExists = await client.query(`SELECT id FROM "user" WHERE id = $1`, [acceptedBy]);
+      if (userExists.rowCount === 0) acceptedBy = null;
+    }
+
+    await client.query(
+      `INSERT INTO invitations (
+         id, company_id, email, name, role, team_id, manager_id, job_title,
+         token, status, invited_by, accepted_by, expires_at, accepted_at,
+         email_delivery_status, email_error, created_at
+       )
+       VALUES (
+         $1, $2, $3, $4, $5, $6, $7, $8,
+         $9, $10, $11, $12, $13::timestamptz, $14::timestamptz,
+         $15, $16, COALESCE($17::timestamptz, NOW())
+       )
+       ON CONFLICT (id) DO UPDATE SET
+         status = EXCLUDED.status,
+         accepted_by = EXCLUDED.accepted_by,
+         accepted_at = EXCLUDED.accepted_at,
+         email_delivery_status = EXCLUDED.email_delivery_status,
+         email_error = EXCLUDED.email_error`,
+      [
+        inv.id, inv.companyId, inv.email, inv.name || "", inv.role || "member",
+        teamId, managerId, inv.jobTitle || "", inv.token, inv.status || "pending",
+        inv.invitedBy, acceptedBy, inv.expiresAt, inv.acceptedAt || null,
+        inv.emailDeliveryStatus || "pending", inv.emailError || null, inv.createdAt || null
+      ]
+    );
+    invitationsRestored++;
+  }
+  console.log(`✓ Restored ${invitationsRestored} Invitations`);
+
+  // 15. Restore Notifications
+  const notifications = backup.notifications || [];
+  let notificationsRestored = 0;
+  for (const n of notifications) {
+    if (!n.id || !n.companyId || !n.recipientId || !n.dedupKey) continue;
+
+    const userExists = await client.query(`SELECT id FROM "user" WHERE id = $1`, [n.recipientId]);
+    if (userExists.rowCount === 0) continue;
+
+    let actorId = n.actorId || null;
+    if (actorId) {
+      const actorExists = await client.query(`SELECT id FROM "user" WHERE id = $1`, [actorId]);
+      if (actorExists.rowCount === 0) actorId = null;
+    }
+
+    await client.query(
+      `INSERT INTO notifications (
+         id, company_id, recipient_id, actor_id, type, title, body,
+         link_path, entity_type, entity_id, dedup_key, read_at,
+         email_status, email_attempts, email_error, last_attempt_at, created_at
+       )
+       VALUES (
+         $1, $2, $3, $4, $5, $6, $7,
+         $8, $9, $10, $11, $12::timestamptz,
+         $13, $14, $15, $16::timestamptz, COALESCE($17::timestamptz, NOW())
+       )
+       ON CONFLICT (company_id, recipient_id, dedup_key) DO UPDATE SET
+         read_at = EXCLUDED.read_at,
+         email_status = EXCLUDED.email_status,
+         email_attempts = EXCLUDED.email_attempts,
+         email_error = EXCLUDED.email_error,
+         last_attempt_at = EXCLUDED.last_attempt_at`,
+      [
+        n.id, n.companyId, n.recipientId, actorId, n.type || "system", n.title, n.body || "",
+        n.linkPath || null, n.entityType || null, n.entityId || null, n.dedupKey, n.readAt || null,
+        n.emailStatus || "in_app_only", n.emailAttempts || 0, n.emailError || null,
+        n.lastAttemptAt || null, n.createdAt || null
+      ]
+    );
+    notificationsRestored++;
+  }
+  console.log(`✓ Restored ${notificationsRestored} Notifications`);
+
+  // 16. Restore Audit Logs
   const auditLogs = backup.auditLogs || [];
   let auditLogsRestored = 0;
   for (const al of auditLogs) {
@@ -562,27 +776,34 @@ try {
   }
   console.log(`✓ Restored ${auditLogsRestored} Audit Trail entries`);
 
-  // 13. Recalculate Parent Objective Progress
-  const progressRecalc = await client.query(`
-    WITH kr_averages AS (
-      SELECT
-        objective_id,
-        ROUND(AVG(progress), 2) AS calculated_progress
-      FROM key_results
-      WHERE archived_at IS NULL
-      GROUP BY objective_id
-    )
-    UPDATE objectives o
-    SET
-      progress = ka.calculated_progress,
-      updated_at = NOW()
-    FROM kr_averages ka
-    WHERE o.id = ka.objective_id AND o.archived_at IS NULL
-    RETURNING o.id, o.title, o.progress
-  `);
-  console.log(`✓ Recalculated aggregate progress for ${progressRecalc.rowCount} objectives`);
-
   await client.query("COMMIT");
+
+  // Save generated secure credentials manifest to a protected local file
+  const credsDir = path.resolve("docs/recovery");
+  if (!fs.existsSync(credsDir)) {
+    fs.mkdirSync(credsDir, { recursive: true });
+  }
+  const credsPath = path.join(credsDir, "recovery-credentials.json");
+  fs.writeFileSync(
+    credsPath,
+    JSON.stringify(
+      {
+        restoredAt: new Date().toISOString(),
+        company: backup.company?.name,
+        credentials: credentialsManifest.map((c) => ({
+          userId: c.userId,
+          name: c.name,
+          email: c.email,
+          temporaryPassword: c.temporaryPassword,
+          resetToken: c.resetToken,
+          tokenExpiresAt: c.tokenExpiresAt,
+        })),
+      },
+      null,
+      2
+    ),
+    { mode: 0o600 }
+  );
 
   console.log(`\n=======================================================`);
   console.log(` RESTORE COMPLETED SUCCESSFULLY!`);
@@ -592,8 +813,22 @@ try {
   console.log(` - Manager Reporting Lines: ${managerLinesLinked} links`);
   console.log(` - Teams Restored: ${teamsRestored}`);
   console.log(` - OKR Objectives: ${objectivesRestored}`);
+  console.log(` - Goal Permissions: ${objectiveAccessRestored}`);
   console.log(` - Key Results: ${keyResultsRestored}`);
-  console.log(` - Default Login Password for Restored Users: RecoveryPass123!`);
+  console.log(` - Key Result Editors: ${keyResultEditorsRestored}`);
+  console.log(` - Check-in History: ${checkInsRestored}`);
+  console.log(` - Invitations: ${invitationsRestored}`);
+  console.log(` - Notifications: ${notificationsRestored}`);
+  console.log(` - Audit Trail: ${auditLogsRestored}`);
+  console.log(`-------------------------------------------------------`);
+  console.log(` SECURE CREDENTIALS PROVISIONING:`);
+  console.log(` - Unique high-entropy temporary passwords & 24h reset tokens`);
+  console.log(`   were provisioned for all restored users.`);
+  console.log(` - Credentials manifest securely saved to:`);
+  console.log(`   ${credsPath} (file mode 0600)`);
+  if (process.env.RECOVERY_PASSWORD) {
+    console.log(` - [NOTE] Custom override password provided via RECOVERY_PASSWORD.`);
+  }
   console.log(`=======================================================\n`);
 } catch (error) {
   await client.query("ROLLBACK");
