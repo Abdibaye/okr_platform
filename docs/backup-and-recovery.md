@@ -98,10 +98,11 @@ When restoring from a JSON backup, entity order discrepancies can trigger Postgr
 2. **Company & Identity Provisioning with Secure Credentials**:
    - Restores the company workspace record (`companies`).
    - Inserts all users (`user`) with conflict handling (`ON CONFLICT (id) DO UPDATE`).
-   - **Secure Credentials Process**:
+   - **Secure Credentials & Session Revocation**:
      - Eliminates shared static passwords.
      - For each restored user, generates a unique, cryptographically random high-entropy temporary password (or adopts `RECOVERY_PASSWORD` if provided).
      - Inserts or updates the scrypt-hashed password in the `account` table, ensuring that repeated restores synchronize credentials so listed passwords always work for both new and existing accounts.
+     - **Transactional Session Revocation**: Revokes all existing active sessions for affected users within the restore transaction (`DELETE FROM session WHERE user_id = ...`), immediately terminating stale session tokens so pre-existing sessions cannot bypass password rotation.
      - Provisions a secure one-time password reset verification token (24-hour expiration) into the `verification` table matching Better Auth's application contract (`identifier = 'reset-password:<token>'`, `value = '<userId>'`), along with direct reset URLs (`/reset-password?token=<token>`).
      - Outputs the credentials manifest securely to `docs/recovery/recovery-credentials.json` with strictly enforced OS file permissions (`0600`, read/write only by the process owner, enforced even when overwriting an existing file).
 3. **Pass 1 — Roles & Membership Enrollment (Hierarchy-Safe)**:

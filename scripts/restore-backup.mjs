@@ -131,6 +131,16 @@ try {
   }
 
   // 2. Restore Users & Auth Credentials (Ensuring every referenced user exists)
+  // Revoke all existing sessions for affected users within this transaction so stale sessions are rejected
+  let totalSessionsRevoked = 0;
+  if (referencedUserIds.size > 0) {
+    const revokeResult = await client.query(
+      `DELETE FROM session WHERE user_id = ANY($1::text[])`,
+      [Array.from(referencedUserIds)]
+    );
+    totalSessionsRevoked = revokeResult.rowCount;
+  }
+
   let usersRestored = 0;
   for (const uid of referencedUserIds) {
     const profile = userMap.get(uid);
@@ -227,7 +237,7 @@ try {
 
     usersRestored++;
   }
-  console.log(`✓ Restored ${usersRestored} User identities & auth credentials (secure credentials generated)`);
+  console.log(`✓ Restored ${usersRestored} User identities & auth credentials (secure credentials generated, ${totalSessionsRevoked} stale session(s) revoked)`);
 
   // Consolidate Company Memberships
   const membershipMap = new Map();
@@ -831,6 +841,7 @@ try {
   console.log(` RESTORE COMPLETED SUCCESSFULLY!`);
   console.log(` - Company: ${backup.company?.name}`);
   console.log(` - Users Provisioned: ${usersRestored}`);
+  console.log(` - Active Sessions Revoked: ${totalSessionsRevoked}`);
   console.log(` - Company Memberships: ${membershipsRestored}`);
   console.log(` - Manager Reporting Lines: ${managerLinesLinked} links`);
   console.log(` - Teams Restored: ${teamsRestored}`);

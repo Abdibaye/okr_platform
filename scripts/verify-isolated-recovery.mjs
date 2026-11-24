@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
 import { execSync } from "node:child_process";
 import { Client } from "pg";
 import { verifyPassword } from "better-auth/crypto";
@@ -89,6 +90,10 @@ async function main() {
     console.log("=======================================================");
     execSync(`DATABASE_URL="${getDbUrl(DB1)}" node scripts/restore-backup.mjs "${test1File}"`, { stdio: "inherit" });
 
+    const credsPath = path.resolve("docs/recovery/recovery-credentials.json");
+    const credsData1 = JSON.parse(fs.readFileSync(credsPath, "utf8"));
+    const sampleUser = credsData1.credentials[0];
+
     // Verify DB1 data
     await withClient(getDbUrl(DB1), async (client1) => {
       const objCount1 = await client1.query("SELECT COUNT(*) FROM objectives");
@@ -118,9 +123,6 @@ async function main() {
       console.log("=======================================================");
       console.log(" TEST 1B: Password Reset Verification Tokens");
       console.log("=======================================================");
-      const credsPath = path.resolve("docs/recovery/recovery-credentials.json");
-      const credsData1 = JSON.parse(fs.readFileSync(credsPath, "utf8"));
-      const sampleUser = credsData1.credentials[0];
 
       console.log(`Verifying password reset token for user: ${sampleUser.email} (${sampleUser.userId})...`);
       console.log(`Token: ${sampleUser.resetToken}`);
@@ -147,13 +149,29 @@ async function main() {
       console.log(">>> TEST 1B PASSED: Password reset tokens conform to application auth schema! <<<\n");
     });
 
-    // 5. Test Repeat Restore & Existing Account Credential Update
+    // 5. Test Repeat Restore, Session Revocation & Existing Account Credential Update
     console.log("=======================================================");
-    console.log(" TEST 1C: Repeat Restore & Existing Account Passwords");
+    console.log(" TEST 1C: Repeat Restore, Session Revocation & Credentials");
     console.log("=======================================================");
-    console.log("Simulating repeat restore on existing database (DB1)...");
+    console.log("Simulating an active signed-in session before repeat restore...");
 
-    const credsPath = path.resolve("docs/recovery/recovery-credentials.json");
+    const testToken = "test-active-session-" + crypto.randomBytes(16).toString("hex");
+    const testSessionId = "test-session-id-" + crypto.randomBytes(16).toString("hex");
+    const sessionExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await withClient(getDbUrl(DB1), async (client1) => {
+      await client1.query(
+        `INSERT INTO session (id, expires_at, token, created_at, updated_at, ip_address, user_agent, user_id)
+         VALUES ($1, $2, $3, NOW(), NOW(), '127.0.0.1', 'Mozilla/5.0 Test Suite', $4)`,
+        [testSessionId, sessionExpiresAt, testToken, sampleUser.userId]
+      );
+      const preCheck = await client1.query(`SELECT id FROM session WHERE token = $1`, [testToken]);
+      if (preCheck.rowCount !== 1) {
+        throw new Error("Failed to seed active test session!");
+      }
+      console.log(`✓ Seeded active session for user ${sampleUser.email} (token: ${testToken.slice(0, 24)}...)`);
+    });
+
     // Explicitly create file with 0644 to test permissions overwrite enforcement
     fs.writeFileSync(credsPath, "{}", { mode: 0o644 });
     fs.chmodSync(credsPath, 0o644);
@@ -168,9 +186,25 @@ async function main() {
       throw new Error(`File permission not enforced! Expected 0600, got 0${postMode}`);
     }
 
-    const credsData2 = JSON.parse(fs.readFileSync(credsPath, "utf8"));
-    console.log("\nVerifying that repeated restore credentials work against existing accounts...");
+    console.log("\nVerifying that old session is revoked and rejected...");
     await withClient(getDbUrl(DB1), async (client1) => {
+      // 1. Verify old session token was revoked in PostgreSQL session store
+      const postSession = await client1.query(`SELECT id, token FROM session WHERE token = $1`, [testToken]);
+      if (postSession.rowCount !== 0) {
+        throw new Error(`Old session token ${testToken} was NOT revoked! Still present in session table.`);
+      }
+      console.log("✓ Pre-existing session token was successfully revoked within restore transaction (rejected by session store)!");
+
+      // 2. Verify all sessions for affected user are 0
+      const userSessions = await client1.query(`SELECT COUNT(*) FROM session WHERE user_id = $1`, [sampleUser.userId]);
+      if (Number(userSessions.rows[0].count) !== 0) {
+        throw new Error(`User still has ${userSessions.rows[0].count} active sessions! Expected 0.`);
+      }
+      console.log(`✓ All active sessions for affected user ${sampleUser.email} revoked (count: 0)`);
+
+      // 3. Verify that newly generated manifest passwords work against existing accounts
+      const credsData2 = JSON.parse(fs.readFileSync(credsPath, "utf8"));
+      console.log("\nVerifying that newly listed manifest passwords work against existing accounts...");
       for (const cred of credsData2.credentials) {
         const accRes = await client1.query(
           `SELECT password FROM account WHERE user_id = $1 AND provider_id = 'credential'`,
@@ -189,7 +223,7 @@ async function main() {
         }
       }
       console.log(`✓ All ${credsData2.credentials.length} user accounts successfully authenticated with newly listed passwords!`);
-      console.log(">>> TEST 1C PASSED: Repeat restore successfully updates and matches account credentials! <<<\n");
+      console.log(">>> TEST 1C PASSED: Old session rejected AND new manifest passwords work! <<<\n");
     });
 
     // 6. Test Issue 2: published-export-2026-11-23-0151UTC.json (progress value fidelity)
