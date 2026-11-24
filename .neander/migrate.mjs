@@ -5,7 +5,7 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required");
 const client = new Client({
   connectionString: process.env.DATABASE_URL,
-  connectionTimeoutMillis: 10000,
+  connectionTimeoutMillis: parseInt(process.env.PGCONNECT_TIMEOUT || "30000", 10),
   statement_timeout: 120000,
 });
 await client.connect();

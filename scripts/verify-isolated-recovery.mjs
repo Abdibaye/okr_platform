@@ -80,8 +80,20 @@ async function main() {
 
     // 2. Run migrations on both
     console.log("\n2. Applying migrations to isolated databases...");
-    execSync(`DATABASE_URL="${getDbUrl(DB1)}" node .neander/migrate.mjs`, { stdio: "inherit" });
-    execSync(`DATABASE_URL="${getDbUrl(DB2)}" node .neander/migrate.mjs`, { stdio: "inherit" });
+    function runMigrate(dbUrl) {
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          execSync(`DATABASE_URL="${dbUrl}" node .neander/migrate.mjs`, { stdio: "inherit" });
+          return;
+        } catch (err) {
+          if (attempt === 3) throw err;
+          console.log(`[attempt ${attempt}/3] Migration connection timed out, retrying in 2 seconds...`);
+          execSync("node -e 'setTimeout(() => {}, 2000)'");
+        }
+      }
+    }
+    runMigrate(getDbUrl(DB1));
+    runMigrate(getDbUrl(DB2));
     console.log("✓ Migrations applied successfully to both databases.");
 
     // 3. Test Issue 1: submitted-workspace-recovery.json (copied goals ordering)
